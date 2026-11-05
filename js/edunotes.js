@@ -1559,19 +1559,85 @@
 };
 
 function boot() {
+    // 1. Initialize events and state
     initializeEvents();
+    
+    // 2. Read and parse the banks directly!
+    if (window.CBT_NOTE_BANKS && window.CBT_NOTE_BANKS.length > 0) {
+        console.log("Found " + window.CBT_NOTE_BANKS.length + " note banks. Parsing...");
+        
+        const parsedBanks = [];
+        
+        window.CBT_NOTE_BANKS.forEach(raw => {
+            // Clean escaped backticks
+            let text = raw.replace(/\\`\\`\\`/g, '```');
+            
+            let subject = 'Untitled';
+            const subM = text.match(/Subject:\s*(.*)/i);
+            if (subM) subject = subM[1].trim();
 
-  if (window.CBT_NOTE_BANKS && window.CBT_NOTE_BANKS.length > 0) {
-      state.courses = [];
+            let description = '';
+            const descM = text.match(/Description:\s*(.*)/i);
+            if (descM) description = descM[1].trim();
+
+            const topics = [];
+            const parts = text.split(/Topic:\s*/i);
+            
+            for (let i = 1; i < parts.length; i++) {
+                const chunk = parts[i];
+                const firstLineBreak = chunk.indexOf('\n');
+                if (firstLineBreak === -1) continue;
+                
+                const topicName = chunk.substring(0, firstLineBreak).trim();
+                const topicContent = chunk.substring(firstLineBreak).trim();
+                
+                const lessons = [];
+                const lessonParts = topicContent.split(/Lesson:\s*/i);
+                
+                for (let j = 1; j < lessonParts.length; j++) {
+                    const lChunk = lessonParts[j];
+                    const lFirstLineBreak = lChunk.indexOf('\n');
+                    if (lFirstLineBreak === -1) continue;
+                    
+                    const lessonTitle = lChunk.substring(0, lFirstLineBreak).trim();
+                    let lessonBody = lChunk.substring(lFirstLineBreak).trim();
+                    
+                    // Fix missing newlines in test file
+                    lessonBody = lessonBody.replace(/\*\*(.*?)\*\*\*(.*?)\*/g, '**$1**\n\n*$2*');
+                    
+                    if (lessonTitle && lessonBody) {
+                        lessons.push({ title: lessonTitle, body: lessonBody });
+                    }
+                }
+                
+                if (topicName && lessons.length > 0) {
+                    topics.push({ name: topicName, lessons });
+                }
+            }
+
+            if (topics.length > 0) {
+                parsedBanks.push({ subject, description, topics });
+            }
+        });
+
+        // 3. Clear the built-in empty state and merge the real data
+        if (parsedBanks.length > 0 && window.EduNotes && typeof window.EduNotes.mergeBanks === 'function') {
+            state.courses = []; 
+            const count = window.EduNotes.mergeBanks(parsedBanks);
+            console.log("Successfully loaded " + count + " lessons.");
+            persist(); // Save the newly merged data to localStorage
+        }
     }
-  
-    if(!location.hash||location.hash==='#main') {
-      try{history.replaceState(null,'',state.ui.lastRoute||'#/library');}catch{}
+
+    if (!location.hash || location.hash === '#main') {
+        try { history.replaceState(null, '', state.ui.lastRoute || '#/library'); } catch {}
     }
-        if (window.CBT_NOTE_BANKS && window.CBT_NOTE_BANKS.length && window.__noteBanksLoaded !== true) {
-      window.__noteBanksLoaded = true;
-      try { window.EduNotes.mergeBanks(window.CBT_NOTE_BANKS); } catch (e) { console.warn('Note bank merge failed:', e); }
-    }
+    
     renderApp();
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot, { once: true });
+} else {
+    boot();
+}
