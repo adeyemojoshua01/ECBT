@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-[#05070F] text-[#EAF0FB]">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>eduCBT Question Bank Builder</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            canvas: '#05070F', ink: { 900: '#0A0F1C', 800: '#111827', 700: '#1F293D', 600: '#33456A' },
+            hi: '#EAF0FB', mid: '#B7C4DB', lo: '#8A9AB8',
+            brand: { light: '#5EEAD4', DEFAULT: '#14B8A6', dark: '#0F766E' },
+            amber: { light: '#FCD34D', DEFAULT: '#FBBF24', dark: '#F59E0B' },
+            violet: { light: '#A78BFA', DEFAULT: '#7C3AED' },
+            rose: { light: '#FB7185', DEFAULT: '#BE123C' },
+            emerald: { light: '#34D399', DEFAULT: '#10B981' }
+          },
+          fontFamily: { mono: ['JetBrains Mono', 'Fira Code', 'Monaco', 'Consolas', 'monospace'] }
+        }
+      }
+    }
+  </script>
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['\\(', '\\)'], ['$', '$']], displayMath: [['\\[', '\\]'], ['$$', '$$']] },
+      options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'] },
+      startup: { pageReady: () => MathJax.startup.defaultPageReady() }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0A0F1C; }
+    ::-webkit-scrollbar-thumb { background: #1F293D; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #33456A; }
+  </style>
+</head>
+<body class="h-full flex flex-col font-sans overflow-hidden bg-[#05070F] text-[#EAF0FB] antialiased selection:bg-brand/30">
+
+  <!-- TOP BAR -->
+  <header class="h-auto min-h-[3.5rem] border-b border-ink-700 bg-ink-900 px-2 sm:px-4 py-2 flex flex-wrap items-center justify-between shrink-0 z-20 gap-2">
+    <div class="flex items-center space-x-2 sm:space-x-3 w-full sm:w-auto">
+      <button class="md:hidden p-1 text-mid hover:text-hi rounded-lg hover:bg-ink-800 transition" onclick="toggleSidebar()">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+      </button>
+      <div class="flex items-center space-x-2 shrink-0">
+        <span class="text-2xl">🎓</span>
+        <span class="font-bold tracking-tight text-hi hidden sm:inline">eduCBT</span>
+        <span class="text-xs px-2 py-0.5 rounded bg-brand-dark/40 text-brand-light font-mono font-medium border border-brand/30 hidden sm:inline">Builder</span>
+      </div>
+      <span class="text-ink-600 hidden sm:inline">|</span>
+      <input id="bank-name-input" type="text" value="Untitled Bank" class="bg-transparent text-sm font-semibold text-hi focus:outline-none focus:border-b focus:border-brand px-1 py-0.5 rounded hover:bg-ink-800 transition flex-1 min-w-[120px] sm:flex-none sm:w-48" placeholder="Bank Name..." />
+    </div>
+
+    <div class="flex items-center space-x-1 sm:space-x-2 overflow-x-auto w-full sm:w-auto justify-end pb-1 sm:pb-0">
+      <span id="save-indicator" class="text-xs text-emerald font-mono opacity-0 transition-opacity duration-300 mr-2 flex items-center gap-1 shrink-0"><span>💾</span> Saved</span>
+      <div class="flex items-center bg-ink-800 rounded-lg p-0.5 border border-ink-700 shrink-0">
+        <button id="btn-undo" onclick="undo()" disabled title="Undo (Ctrl+Z)" class="px-2 py-1 text-xs rounded hover:bg-ink-700 disabled:opacity-30 text-mid hover:text-hi transition">↩ <span class="hidden lg:inline">Undo</span></button>
+        <button id="btn-redo" onclick="redo()" disabled title="Redo (Ctrl+Y)" class="px-2 py-1 text-xs rounded hover:bg-ink-700 disabled:opacity-30 text-mid hover:text-hi transition">↪ <span class="hidden lg:inline">Redo</span></button>
+      </div>
+      <button onclick="openImportModal()" class="px-2 sm:px-3 py-1.5 text-xs font-medium rounded-lg border border-ink-600 hover:border-mid text-mid hover:text-hi bg-ink-800/50 hover:bg-ink-800 transition shrink-0">Import</button>
+      <button id="btn-preview" onclick="togglePreview()" class="px-2 sm:px-3 py-1.5 text-xs font-medium rounded-lg border border-brand/40 text-brand-light hover:bg-brand-dark/20 transition flex items-center gap-1.5 shrink-0">👁 <span id="preview-btn-text" class="hidden sm:inline">Preview</span></button>
+      <button onclick="openExportModal()" class="px-2 sm:px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-amber text-ink-900 hover:bg-amber-light transition shadow-sm shrink-0">Export</button>
+           <button onclick="openPublishModal()" class="px-2 sm:px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-brand text-ink-900 hover:bg-brand-light transition shadow-sm shrink-0">Publish</button>
+    </div>
+  </header>
+
+  <main id="app-container" class="flex-1 flex overflow-hidden relative">
+    <div id="sidebar-backdrop" class="fixed inset-0 bg-black/60 z-20 hidden md:hidden backdrop-blur-sm transition-opacity" onclick="toggleSidebar()"></div>
+
+    <div id="view-empty" class="absolute inset-0 z-20 flex flex-col items-center justify-center p-4 sm:p-6 bg-[#05070F] transition-opacity">
+      <div class="max-w-md w-full text-center space-y-6">
+        <div class="space-y-2">
+          <h1 class="text-3xl font-extrabold tracking-tight text-hi">eduCBT Question Bank Builder</h1>
+          <p class="text-sm text-lo">Author, edit, preview, and validate question banks with live LaTeX typesetting.</p>
+        </div>
+        <div id="drop-zone-empty" onclick="triggerFileSelect()" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)" class="border-2 border-dashed border-ink-600 hover:border-brand/60 bg-ink-900/50 rounded-2xl p-8 cursor-pointer transition flex flex-col items-center justify-center space-y-3 group">
+          <div class="w-12 h-12 rounded-full bg-ink-800 group-hover:bg-brand-dark/30 text-brand-light flex items-center justify-center text-2xl transition">📁</div>
+          <div class="space-y-1">
+            <p class="text-sm font-semibold text-hi">Drop your bank file (.js) here</p>
+            <p class="text-xs text-lo">or click to browse from your computer</p>
+          </div>
+          <input type="file" id="file-input-empty" accept=".js,.txt" class="hidden" onchange="handleFileSelect(event)">
+        </div>
+        <div class="flex items-center gap-4 text-xs text-lo font-mono uppercase tracking-wider">
+          <div class="flex-1 h-px bg-ink-700"></div><span>OR</span><div class="flex-1 h-px bg-ink-700"></div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <button onclick="createBlankBank()" class="py-2.5 px-4 rounded-xl bg-ink-800 hover:bg-ink-700 border border-ink-700 text-xs font-semibold text-hi transition">➕ Create Blank</button>
+          <button onclick="loadExampleBank()" class="py-2.5 px-4 rounded-xl bg-brand-dark/20 hover:bg-brand-dark/40 border border-brand/30 text-xs font-semibold text-brand-light transition">📦 Load Sample</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="view-editor" class="flex-1 flex w-full h-full opacity-0 pointer-events-none transition-opacity">
+      <aside id="sidebar" class="w-72 fixed md:relative inset-y-0 left-0 z-30 border-r border-ink-700 bg-ink-900 flex flex-col shrink-0 transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out md:h-full">
+        <div class="p-3 border-b border-ink-700/60">
+          <div class="relative">
+            <input id="search-input" type="text" oninput="handleSearch(this.value)" placeholder="Search questions, topics..." class="w-full bg-ink-800 text-xs text-hi placeholder-lo rounded-lg pl-8 pr-3 py-1.5 border border-ink-700 focus:outline-none focus:border-brand transition">
+            <span class="absolute left-2.5 top-1.5 text-xs text-lo">🔍</span>
+          </div>
+        </div>
+        <div id="sidebar-tree" class="flex-1 overflow-y-auto p-2 space-y-1"></div>
+        <div class="p-3 border-t border-ink-700 bg-ink-900/80">
+          <button onclick="addSubject()" class="w-full py-2 px-3 text-xs font-semibold rounded-lg bg-ink-800 hover:bg-ink-700 text-brand-light border border-ink-700 hover:border-brand/40 transition flex items-center justify-center gap-1.5">➕ New Subject</button>
+        </div>
+      </aside>
+
+      <section class="flex-1 flex flex-col bg-canvas overflow-hidden w-full">
+        <div class="h-10 border-b border-ink-700/60 bg-ink-900/40 px-4 md:px-6 flex items-center justify-between shrink-0">
+          <div id="breadcrumb" class="text-xs font-mono text-lo flex items-center space-x-1.5 overflow-x-auto whitespace-nowrap"></div>
+          <div id="preview-status" class="hidden text-xs font-medium text-brand-light bg-brand-dark/20 px-2 py-0.5 rounded border border-brand/30 shrink-0">Preview Mode</div>
+        </div>
+        <div id="middle-pane" class="flex-1 overflow-y-auto p-4 md:p-8"></div>
+      </section>
+    </div>
+  </main>
+
+  <!-- MODALS & TOASTS -->
+  <div id="modal-import" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-ink-900 border border-ink-700 rounded-2xl w-full max-w-xl p-6 shadow-2xl space-y-5">
+      <div class="flex items-center justify-between border-b border-ink-700 pb-3"><h3 class="text-base font-bold text-hi flex items-center gap-2">📥 Import</h3><button onclick="closeModal('modal-import')" class="text-lo hover:text-hi p-1">✕</button></div>
+      <div class="space-y-3">
+        <div id="import-drop-zone" onclick="document.getElementById('import-file-input').click()" class="border-2 border-dashed border-ink-600 hover:border-brand bg-ink-800/40 rounded-xl p-4 text-center cursor-pointer transition"><p class="text-xs font-medium text-hi">Drop .js file or click to browse</p><input type="file" id="import-file-input" accept=".js,.txt" class="hidden" onchange="handleImportFileSelect(event)"></div>
+        <div class="text-center text-xs text-lo font-mono">— or paste —</div>
+        <textarea id="import-paste-area" oninput="handleImportPaste()" rows="5" class="w-full bg-ink-800 font-mono text-xs text-hi border border-ink-700 rounded-xl p-3 focus:outline-none focus:border-brand" placeholder="window.CBT_SUBJECT_BANKS.push(`...`)"></textarea>
+        <button onclick="importFromGitHub()" class="mt-2 text-xs text-brand-light hover:underline flex items-center gap-1">
+  <span>☁️</span> Import directly from my GitHub Repo
+</button>
+      </div>
+      <div id="import-parse-result" class="bg-ink-800/60 border border-ink-700 rounded-xl p-3 text-xs space-y-1.5 hidden"><div id="import-summary" class="font-semibold text-brand-light"></div><div id="import-warnings" class="text-amber text-[11px] space-y-1"></div></div>
+      <div class="space-y-3 pt-2">
+        <div class="flex items-center space-x-4 text-xs">
+          <span class="text-mid font-medium">Mode:</span>
+          <label class="flex items-center space-x-1.5 cursor-pointer text-hi"><input type="radio" name="import-mode" value="replace" checked class="accent-brand"><span>Replace</span></label>
+          <label class="flex items-center space-x-1.5 cursor-pointer text-hi"><input type="radio" name="import-mode" value="merge" class="accent-brand"><span>Merge</span></label>
+        </div>
+        <div class="flex justify-end space-x-2 pt-2 border-t border-ink-700"><button onclick="closeModal('modal-import')" class="px-4 py-2 text-xs font-medium text-mid hover:text-hi transition">Cancel</button><button id="btn-confirm-import" onclick="executeImport()" disabled class="px-4 py-2 text-xs font-semibold rounded-lg bg-brand text-ink-900 disabled:opacity-40 hover:bg-brand-light transition">Parse & Import</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-export" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-ink-900 border border-ink-700 rounded-2xl w-full max-w-2xl p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-ink-700 pb-3 shrink-0"><h3 class="text-base font-bold text-hi flex items-center gap-2">📤 Export</h3><button onclick="closeModal('modal-export')" class="text-lo hover:text-hi p-1">✕</button></div>
+      <div id="export-validation-container" class="shrink-0"></div>
+      <div class="space-y-3 shrink-0 bg-ink-800/40 p-3 rounded-xl border border-ink-700">
+        <div class="flex items-center justify-between gap-4"><label class="text-xs font-medium text-mid whitespace-nowrap">Filename:</label><input id="export-filename" type="text" class="flex-1 bg-ink-800 text-xs font-mono text-hi border border-ink-700 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-brand"></div>
+        <div class="flex items-center space-x-2"><input type="checkbox" id="export-shuffle" onchange="updateExportPreview()" class="accent-brand rounded"><label for="export-shuffle" class="text-xs text-hi cursor-pointer">Shuffle options</label></div>
+      </div>
+      <div class="flex-1 flex flex-col min-h-0 space-y-1">
+        <div class="flex justify-between items-center text-xs text-lo"><span>Preview:</span><span id="export-stats-badge" class="font-mono text-brand-light">0 KB</span></div>
+        <pre id="export-code-preview" class="flex-1 bg-canvas border border-ink-700 rounded-xl p-3 font-mono text-[11px] text-mid overflow-auto select-all whitespace-pre-wrap"></pre>
+      </div>
+      <div class="flex items-center justify-between pt-3 border-t border-ink-700 shrink-0">
+        <span id="export-summary-info" class="text-xs text-lo"></span>
+        <div class="flex space-x-2"><button onclick="copyExportCode()" class="px-4 py-2 text-xs font-semibold rounded-lg bg-ink-800 hover:bg-ink-700 border border-ink-700 text-hi transition">Copy Code</button><button id="btn-download-export" onclick="downloadExportFile()" class="px-4 py-2 text-xs font-semibold rounded-lg bg-amber text-ink-900 hover:bg-amber-light transition">Download</button></div>
+      </div>
+    </div>
+  </div>
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+  <!-- MODAL: PUBLISH -->
+  <div id="modal-publish" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-ink-900 border border-ink-700 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-ink-700 pb-3">
+        <h3 class="text-base font-bold text-hi flex items-center gap-2">🚀 Publish to GitHub</h3>
+        <button onclick="closeModal('modal-publish')" class="text-lo hover:text-hi p-1">✕</button>
+      </div>
+      
+      <div class="space-y-3">
+        <div>
+          <label class="text-xs text-mid block mb-1">GitHub Username/Org</label>
+          <input id="gh-owner" type="text" placeholder="e.g. your-username" class="w-full bg-ink-800 text-xs text-hi border border-ink-700 rounded-lg px-3 py-2 focus:outline-none focus:border-brand">
+        </div>
+        <div>
+          <label class="text-xs text-mid block mb-1">Repository Name</label>
+          <input id="gh-repo" type="text" placeholder="e.g. educbt-project" class="w-full bg-ink-800 text-xs text-hi border border-ink-700 rounded-lg px-3 py-2 focus:outline-none focus:border-brand">
+        </div>
+        <div>
+          <label class="text-xs text-mid block mb-1">GitHub Token (Hidden, stored in localStorage)</label>
+          <input id="gh-token" type="password" placeholder="ghp_xxxxxxxxxxxx" class="w-full bg-ink-800 text-xs text-hi border border-ink-700 rounded-lg px-3 py-2 focus:outline-none focus:border-brand">
+        </div>
+        <div>
+          <label class="text-xs text-mid block mb-1">File Name to Create/Overwrite</label>
+          <input id="publish-filename" type="text" placeholder="physics-bank.js" class="w-full bg-ink-800 font-mono text-xs text-hi border border-ink-700 rounded-lg px-3 py-2 focus:outline-none focus:border-brand">
+        </div>
+      </div>
+
+      <div class="pt-4 border-t border-ink-700 flex justify-end space-x-2">
+        <button onclick="closeModal('modal-publish')" class="px-4 py-2 text-xs font-medium text-mid hover:text-hi transition">Cancel</button>
+        <button id="btn-do-publish" onclick="executePublish()" class="px-4 py-2 text-xs font-semibold rounded-lg bg-brand text-ink-900 hover:bg-brand-light transition">Publish & Deploy</button>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    const LOCAL_STORAGE_KEY = 'cbt_bank_builder_state';
+    let appData = { bankName: "Untitled Bank", subjects: [] };
+    let selectedPath = null, isPreviewMode = false, studyModeAnswersVisible = {};
+    let undoStack = [], redoStack = [], saveTimeout = null, pendingImportData = null;
+
+    window.addEventListener('DOMContentLoaded', () => { loadFromLocalStorage(); setupEventListeners(); renderApp(); });
+
+    function setupEventListeners() {
+      document.getElementById('bank-name-input').addEventListener('input', (e) => { pushUndoState(); appData.bankName = e.target.value; triggerAutoSave(); });
+      window.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'z') { e.shiftKey ? redo() : undo(); }
+        else if ((e.ctrlKey || e.metaKey) && e.key === 'y') { redo(); }
+      });
+    }
+
+    function createId(prefix = 'id') { return prefix + '_' + Math.random().toString(36).substr(2, 9); }
+
+    function saveToLocalStorage() {
+      try { localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(appData)); showSaveIndicator(); } catch (e) { console.error(e); }
+    }
+
+    function loadFromLocalStorage() {
+      try {
+        const saved = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (saved) {
+          appData = JSON.parse(saved);
+          if (appData.subjects && appData.subjects.length > 0) selectedPath = { subjectId: appData.subjects[0].id, topicId: null, questionId: null };
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    function triggerAutoSave() { clearTimeout(saveTimeout); saveTimeout = setTimeout(saveToLocalStorage, 500); }
+    function showSaveIndicator() { const el = document.getElementById('save-indicator'); if (el) { el.style.opacity = '1'; setTimeout(() => el.style.opacity = '0', 1500); } }
+
+    function pushUndoState() { undoStack.push(JSON.stringify(appData)); if (undoStack.length > 50) undoStack.shift(); redoStack = []; updateUndoRedoUI(); }
+    function undo() { if (!undoStack.length) return; redoStack.push(JSON.stringify(appData)); appData = JSON.parse(undoStack.pop()); saveToLocalStorage(); renderApp(); updateUndoRedoUI(); showToast('Undone'); }
+    function redo() { if (!redoStack.length) return; undoStack.push(JSON.stringify(appData)); appData = JSON.parse(redoStack.pop()); saveToLocalStorage(); renderApp(); updateUndoRedoUI(); showToast('Redone'); }
+    function updateUndoRedoUI() { document.getElementById('btn-undo').disabled = !undoStack.length; document.getElementById('btn-redo').disabled = !redoStack.length; }
+
+    function showToast(message, actionText = null, actionCallback = null) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = "pointer-events-auto bg-ink-800 border border-ink-700 text-hi text-xs px-4 py-2.5 rounded-xl shadow-xl flex items-center justify-between gap-4 transition-all duration-300 transform translate-y-2 opacity-0";
+      let html = `<span>${message}</span>`;
+      if (actionText && actionCallback) html += `<button id="toast-btn" class="text-brand-light font-semibold hover:underline">${actionText}</button>`;
+      toast.innerHTML = html; container.appendChild(toast);
+      if (actionText && actionCallback) toast.querySelector('#toast-btn').onclick = () => { actionCallback(); toast.remove(); };
+      requestAnimationFrame(() => toast.classList.remove('translate-y-2', 'opacity-0'));
+      setTimeout(() => { toast.classList.add('opacity-0', 'translate-y-2'); setTimeout(() => toast.remove(), 300); }, 8000);
+    }
+
+    function toggleSidebar() {
+      const sidebar = document.getElementById('sidebar'); const backdrop = document.getElementById('sidebar-backdrop');
+      const isClosed = sidebar.classList.contains('-translate-x-full');
+      if (isClosed) { sidebar.classList.remove('-translate-x-full'); backdrop.classList.remove('hidden'); }
+      else { sidebar.classList.add('-translate-x-full'); backdrop.classList.add('hidden'); }
+    }
+
+    function createBlankBank() {
+      pushUndoState();
+      const subId = createId('sub'), topId = createId('top'), qId = createId('q');
+      appData = { bankName: "New Bank", subjects: [{ id: subId, name: "Untitled Subject", duration: 30, topics: [{ id: topId, name: "Untitled Topic", questions: [{ id: qId, type: "MCQ", subTopic: "", question: "Sample", options: ["A", "B", "C", "D"], correct: "A", explanation: "" }] }] }] };
+      selectedPath = { subjectId: subId, topicId: topId, questionId: qId }; saveToLocalStorage(); renderApp();
+    }
+
+    function loadExampleBank() {
+      pushUndoState();
+      const sub1Id = createId('sub'), top1Id = createId('top');
+      appData = {
+        bankName: "Physics Bank",
+        subjects: [{ id: sub1Id, name: "Physics", duration: 45, topics: [{ id: top1Id, name: "Mechanics", questions: [
+          { id: createId('q'), type: "MCQ", subTopic: "First Law of Motion", question: "What is Newton's first law?", options: ["Inertia", "F=ma", "Action-Reaction", "Gravity"], correct: "A", explanation: "An object in motion stays in motion." }
+        ]}]}]
+      };
+      selectedPath = { subjectId: sub1Id, topicId: top1Id, questionId: appData.subjects[0].topics[0].questions[0].id }; saveToLocalStorage(); renderApp();
+    }
+
+    function renderApp() {
+      const emptyView = document.getElementById('view-empty'), editorView = document.getElementById('view-editor'), bankNameInput = document.getElementById('bank-name-input');
+      bankNameInput.value = appData.bankName || "Untitled Bank";
+      if (!appData.subjects || !appData.subjects.length) { emptyView.classList.remove('opacity-0', 'pointer-events-none'); editorView.classList.add('opacity-0', 'pointer-events-none'); return; }
+      emptyView.classList.add('opacity-0', 'pointer-events-none'); editorView.classList.remove('opacity-0', 'pointer-events-none');
+      renderSidebarTree(); renderBreadcrumb(); renderMiddlePane(); updateUndoRedoUI(); triggerMathJax();
+    }
+
+    function triggerMathJax() { if (window.MathJax && MathJax.typesetPromise) MathJax.typesetPromise().catch(console.log); }
+
+    function renderSidebarTree() {
+      const container = document.getElementById('sidebar-tree'); container.innerHTML = '';
+      appData.subjects.forEach(sub => {
+        const isSubSel = selectedPath && selectedPath.subjectId === sub.id && !selectedPath.topicId;
+        const subNode = document.createElement('div'); subNode.className = "space-y-0.5";
+        const subHeader = document.createElement('div'); subHeader.className = `group flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-semibold cursor-pointer transition ${isSubSel ? 'bg-ink-700 text-hi' : 'text-mid hover:bg-ink-800/60'}`;
+        subHeader.innerHTML = `<div class="flex items-center space-x-2 truncate"><span class="text-xs text-lo">📘</span><span class="truncate">${escapeHtml(sub.name)}</span></div><span class="text-[10px] text-lo font-mono">${sub.topics.length} topics</span>`;
+        subHeader.onclick = () => selectPath(sub.id, null, null); subNode.appendChild(subHeader);
+        
+        const topicsList = document.createElement('div'); topicsList.className = "pl-3 space-y-0.5 border-l border-ink-800 ml-3 my-0.5";
+        sub.topics.forEach(top => {
+          const isTopSel = selectedPath && selectedPath.topicId === top.id && !selectedPath.questionId;
+          const topNode = document.createElement('div');
+          const topHeader = document.createElement('div'); topHeader.className = `group flex items-center justify-between px-2 py-1 rounded-md text-xs cursor-pointer transition ${isTopSel ? 'bg-ink-700 text-hi font-medium' : 'text-lo hover:bg-ink-800/40'}`;
+          topHeader.innerHTML = `<div class="flex items-center space-x-1.5 truncate"><span class="text-[10px] text-lo">📂</span><span class="truncate">${escapeHtml(top.name)}</span></div><span class="text-[10px] text-lo font-mono">${top.questions.length}</span>`;
+          topHeader.onclick = () => selectPath(sub.id, top.id, null); topNode.appendChild(topHeader);
+          
+          const qList = document.createElement('div'); qList.className = "pl-2.5 space-y-0.5 border-l border-ink-800/60 ml-2 my-0.5";
+          top.questions.forEach((q, idx) => {
+            const isQSel = selectedPath && selectedPath.questionId === q.id;
+            const qNum = `Q${String(idx + 1).padStart(3, '0')}`;
+            let dotColor = q.type === 'Fill' ? "bg-amber" : q.type === 'Theory' ? "bg-violet" : "bg-brand";
+            const qRow = document.createElement('div'); qRow.className = `flex items-center justify-between px-2 py-1 rounded text-xs cursor-pointer transition font-mono ${isQSel ? 'bg-brand-dark/20 text-brand-light font-semibold border border-brand/30' : 'text-lo hover:bg-ink-800/40'}`;
+            qRow.innerHTML = `<div class="flex items-center space-x-2 truncate"><span class="w-1.5 h-1.5 rounded-full ${dotColor} shrink-0"></span><span class="text-[11px]">${qNum}</span><span class="text-[10px] opacity-75 truncate">${escapeHtml(q.type)}</span></div>`;
+            qRow.onclick = () => selectPath(sub.id, top.id, q.id); qList.appendChild(qRow);
+          });
+          topNode.appendChild(qList); topicsList.appendChild(topNode);
+        });
+        subNode.appendChild(topicsList); container.appendChild(subNode);
+      });
+    }
+
+        function selectPath(subjectId, topicId, questionId) {
+      selectedPath = { subjectId, topicId, questionId };
+      renderApp();
+      
+      // 🌟 NEW: Save this navigation step to the phone's history
+      history.pushState({ subjectId, topicId, questionId }, '', '#editor');
+
+      // Auto-close sidebar on mobile when an item is selected
+      if (window.innerWidth < 768) {
+        const sidebar = document.getElementById('sidebar');
+        const backdrop = document.getElementById('sidebar-backdrop');
+        if (!sidebar.classList.contains('-translate-x-full')) {
+          sidebar.classList.add('-translate-x-full');
+          backdrop.classList.add('hidden');
+        }
+      }
+    }
+
+    function renderBreadcrumb() {
+      const container = document.getElementById('breadcrumb'); if (!selectedPath) return;
+      const sub = appData.subjects.find(s => s.id === selectedPath.subjectId); if (!sub) return;
+      let html = `<span class="cursor-pointer hover:text-hi" onclick="selectPath('${sub.id}', null, null)">${escapeHtml(sub.name)}</span>`;
+      if (selectedPath.topicId) {
+        const top = sub.topics.find(t => t.id === selectedPath.topicId);
+        if (top) {
+          html += ` <span class="text-ink-600">›</span> <span class="cursor-pointer hover:text-hi" onclick="selectPath('${sub.id}', '${top.id}', null)">${escapeHtml(top.name)}</span>`;
+          if (selectedPath.questionId) {
+            const qIdx = top.questions.findIndex(q => q.id === selectedPath.questionId);
+            if (qIdx !== -1) html += ` <span class="text-ink-600">›</span> <span class="text-brand-light font-bold">Q${String(qIdx + 1).padStart(3, '0')}</span>`;
+          }
+        }
+      }
+      container.innerHTML = html;
+    }
+
+    function renderMiddlePane() {
+      const pane = document.getElementById('middle-pane'); pane.innerHTML = ''; if (!selectedPath) return;
+      const sub = appData.subjects.find(s => s.id === selectedPath.subjectId); if (!sub) return;
+      if (isPreviewMode) { renderPreviewMode(pane, sub); return; }
+      if (selectedPath.questionId && selectedPath.topicId) {
+        const top = sub.topics.find(t => t.id === selectedPath.topicId); if (!top) return;
+        const qIdx = top.questions.findIndex(q => q.id === selectedPath.questionId); if (qIdx === -1) return;
+        renderQuestionEditor(pane, sub, top, top.questions[qIdx], qIdx);
+      } else if (selectedPath.topicId) {
+        const top = sub.topics.find(t => t.id === selectedPath.topicId); if (!top) return;
+        renderTopicEditor(pane, sub, top);
+      } else { renderSubjectEditor(pane, sub); }
+    }
+
+    function renderSubjectEditor(container, sub) {
+      const wrapper = document.createElement('div'); wrapper.className = "w-full max-w-3xl mx-auto space-y-8";
+      wrapper.innerHTML = `
+        <div class="space-y-4">
+          <div><label class="block text-xs font-semibold text-lo uppercase tracking-wider mb-1">Subject Name</label><input type="text" id="sub-name-input" value="${escapeHtml(sub.name)}" class="w-full bg-ink-800 text-lg font-bold text-hi border border-ink-700 rounded-xl px-4 py-2.5 focus:outline-none focus:border-brand transition"></div>
+          <div class="w-48"><label class="block text-xs font-semibold text-lo uppercase tracking-wider mb-1">Duration (min)</label><input type="number" id="sub-duration-input" value="${sub.duration || 30}" min="1" class="w-full bg-ink-800 text-sm font-mono text-hi border border-ink-700 rounded-xl px-4 py-2 focus:outline-none focus:border-brand transition"></div>
+        </div>
+        <div class="space-y-3">
+          <div class="flex items-center justify-between border-b border-ink-700 pb-2"><h4 class="text-sm font-bold text-hi">Topics (${sub.topics.length})</h4><button onclick="addTopic('${sub.id}')" class="text-xs font-semibold text-brand-light hover:underline">+ Add Topic</button></div>
+          <div class="space-y-2" id="topic-rows">
+            ${sub.topics.map((top, idx) => `
+              <div class="flex items-center justify-between bg-ink-900 border border-ink-700 rounded-xl p-3 hover:border-ink-600 transition">
+                <div class="flex items-center space-x-2">
+                  <div class="flex flex-col space-y-0.5"><button onclick="reorderTopic('${sub.id}', ${idx}, -1)" ${idx === 0 ? 'disabled' : ''} class="text-[10px] text-lo hover:text-hi disabled:opacity-20">▲</button><button onclick="reorderTopic('${sub.id}', ${idx}, 1)" ${idx === sub.topics.length - 1 ? 'disabled' : ''} class="text-[10px] text-lo hover:text-hi disabled:opacity-20">▼</button></div>
+                  <span class="text-xs font-semibold text-hi cursor-pointer hover:text-brand-light" onclick="selectPath('${sub.id}', '${top.id}', null)">${escapeHtml(top.name)}</span>
+                </div>
+                <span class="text-xs font-mono text-lo">${top.questions.length} questions</span>
+              </div>`).join('')}
+          </div>
+        </div>
+        <div class="pt-6 border-t border-ink-700/60 flex justify-end"><button onclick="deleteSubject('${sub.id}')" class="px-4 py-2 text-xs font-semibold text-rose hover:bg-rose/10 rounded-xl border border-rose/30 transition">Delete Subject</button></div>`;
+      container.appendChild(wrapper);
+      document.getElementById('sub-name-input').addEventListener('input', (e) => { pushUndoState(); sub.name = e.target.value; renderSidebarTree(); renderBreadcrumb(); triggerAutoSave(); });
+      document.getElementById('sub-duration-input').addEventListener('input', (e) => { pushUndoState(); sub.duration = parseInt(e.target.value) || 30; triggerAutoSave(); });
+    }
+
+    function renderTopicEditor(container, sub, top) {
+      const wrapper = document.createElement('div'); wrapper.className = "w-full max-w-3xl mx-auto space-y-8";
+      wrapper.innerHTML = `
+        <div class="space-y-4"><div><label class="block text-xs font-semibold text-lo uppercase tracking-wider mb-1">Topic Name</label><input type="text" id="top-name-input" value="${escapeHtml(top.name)}" class="w-full bg-ink-800 text-lg font-bold text-hi border border-ink-700 rounded-xl px-4 py-2.5 focus:outline-none focus:border-brand transition"></div></div>
+        <div class="space-y-3">
+          <div class="flex items-center justify-between border-b border-ink-700 pb-2"><h4 class="text-sm font-bold text-hi">Questions (${top.questions.length})</h4><button onclick="shuffleTopicMCQs('${sub.id}', '${top.id}')" class="px-2.5 py-1 text-xs font-medium rounded-lg bg-ink-800 hover:bg-ink-700 border border-ink-700 text-mid hover:text-hi transition">🔀 Shuffle Options</button></div>
+          <div class="space-y-2" id="question-rows">
+            ${top.questions.map((q, idx) => {
+              let badgeColor = q.type === 'Fill' ? "bg-amber-dark/30 text-amber-light border-amber/30" : q.type === 'Theory' ? "bg-violet-dark/30 text-violet-light border-violet/30" : "bg-brand-dark/30 text-brand-light border-brand/30";
+              return `
+                <div class="flex items-center justify-between bg-ink-900 border border-ink-700 rounded-xl p-3 hover:border-ink-600 transition">
+                  <div class="flex items-center space-x-3 truncate">
+                    <div class="flex flex-col space-y-0.5"><button onclick="reorderQuestion('${sub.id}', '${top.id}', ${idx}, -1)" ${idx === 0 ? 'disabled' : ''} class="text-[10px] text-lo hover:text-hi disabled:opacity-20">▲</button><button onclick="reorderQuestion('${sub.id}', '${top.id}', ${idx}, 1)" ${idx === top.questions.length - 1 ? 'disabled' : ''} class="text-[10px] text-lo hover:text-hi disabled:opacity-20">▼</button></div>
+                    <span class="text-xs font-mono font-bold text-brand-light cursor-pointer" onclick="selectPath('${sub.id}', '${top.id}', '${q.id}')">Q${String(idx + 1).padStart(3, '0')}</span>
+                    <span class="text-xs text-mid truncate cursor-pointer hover:text-hi" onclick="selectPath('${sub.id}', '${top.id}', '${q.id}')">${escapeHtml(q.question || '(Empty)')}</span>
+                  </div>
+                  <span class="text-[10px] font-mono px-2 py-0.5 rounded border ${badgeColor}">${q.type}</span>
+                </div>`;
+            }).join('')}
+          </div>
+          <div class="flex items-center space-x-2 pt-2">
+            <button onclick="addQuestion('${sub.id}', '${top.id}', 'MCQ')" class="flex-1 py-2 text-xs font-semibold rounded-xl bg-ink-800 hover:bg-ink-700 border border-brand/40 text-brand-light transition">+ MCQ</button>
+            <button onclick="addQuestion('${sub.id}', '${top.id}', 'Fill')" class="flex-1 py-2 text-xs font-semibold rounded-xl bg-ink-800 hover:bg-ink-700 border border-amber/40 text-amber-light transition">+ Fill</button>
+            <button onclick="addQuestion('${sub.id}', '${top.id}', 'Theory')" class="flex-1 py-2 text-xs font-semibold rounded-xl bg-ink-800 hover:bg-ink-700 border border-violet/40 text-violet-light transition">+ Theory</button>
+          </div>
+        </div>
+        <div class="pt-6 border-t border-ink-700/60 flex justify-end"><button onclick="deleteTopic('${sub.id}', '${top.id}')" class="px-4 py-2 text-xs font-semibold text-rose hover:bg-rose/10 rounded-xl border border-rose/30 transition">Delete Topic</button></div>`;
+      container.appendChild(wrapper);
+      document.getElementById('top-name-input').addEventListener('input', (e) => { pushUndoState(); top.name = e.target.value; renderSidebarTree(); renderBreadcrumb(); triggerAutoSave(); });
+    }
+
+    function renderQuestionEditor(container, sub, top, q, qIndex) {
+      const wrapper = document.createElement('div'); wrapper.className = "w-full max-w-3xl mx-auto space-y-6";
+      wrapper.innerHTML = `
+        <div class="flex flex-wrap items-center gap-4 bg-ink-900 border border-ink-700 rounded-xl p-3">
+          <div class="flex items-center space-x-3">
+            <span class="text-xs font-mono font-bold text-brand-light">Q${String(qIndex + 1).padStart(3, '0')}</span>
+            <span class="text-xs text-lo">Type:</span>
+            <select id="q-type-select" class="bg-ink-800 text-xs font-semibold text-hi border border-ink-700 rounded-lg px-2.5 py-1 focus:outline-none focus:border-brand">
+              <option value="MCQ" ${q.type === 'MCQ' ? 'selected' : ''}>MCQ</option>
+              <option value="Fill" ${q.type === 'Fill' ? 'selected' : ''}>Fill in the Blank</option>
+              <option value="Theory" ${q.type === 'Theory' ? 'selected' : ''}>Theory</option>
+            </select>
+          </div>
+          
+          <!-- 🌟 NEW: SubTopic Input -->
+          <div class="flex items-center space-x-2 flex-grow">
+            <span class="text-xs text-lo whitespace-nowrap">SubTopic:</span>
+            <input type="text" id="q-subtopic-input" value="${escapeHtml(q.subTopic || '')}" placeholder="e.g. First Law of Motion" class="w-full bg-ink-800 text-xs font-semibold text-hi border border-ink-700 rounded-lg px-2.5 py-1 focus:outline-none focus:border-brand">
+          </div>
+        </div>
+
+        <div class="space-y-1.5">
+          <label class="block text-xs font-semibold text-lo uppercase tracking-wider">Question Text</label>
+          <textarea id="q-text-input" rows="3" class="w-full bg-ink-800 font-mono text-xs text-hi border border-ink-700 rounded-xl p-3 focus:outline-none focus:border-brand transition" placeholder="Enter question...">${escapeHtml(q.question || '')}</textarea>
+          <div class="bg-ink-900/80 border border-ink-700/60 rounded-xl p-3 text-xs text-hi min-h-[40px] flex items-center"><div id="preview-q-text" class="w-full">${q.question ? escapeHtml(q.question) : '<span class="text-lo italic">Preview...</span>'}</div></div>
+        </div>
+
+        <div id="type-specific-fields" class="space-y-5"></div>
+        <div class="space-y-1.5">
+          <label class="block text-xs font-semibold text-lo uppercase tracking-wider">Explanation / Model Answer</label>
+          <textarea id="q-explanation-input" rows="3" class="w-full bg-ink-800 font-mono text-xs text-hi border border-ink-700 rounded-xl p-3 focus:outline-none focus:border-brand transition" placeholder="Enter solution...">${escapeHtml(q.explanation || '')}</textarea>
+          <div class="bg-ink-900/80 border border-ink-700/60 rounded-xl p-3 text-xs text-hi min-h-[40px] flex items-center"><div id="preview-q-explanation" class="w-full">${q.explanation ? escapeHtml(q.explanation) : '<span class="text-lo italic">Preview...</span>'}</div></div>
+        </div>
+        <div class="pt-6 border-t border-ink-700/60 flex items-center justify-between">
+          <button onclick="duplicateQuestion('${sub.id}', '${top.id}', '${q.id}')" class="px-4 py-2 text-xs font-semibold text-hi bg-ink-800 hover:bg-ink-700 rounded-xl border border-ink-700 transition flex items-center gap-1.5">📄 Duplicate</button>
+          <button onclick="deleteQuestion('${sub.id}', '${top.id}', '${q.id}')" class="px-4 py-2 text-xs font-semibold text-rose hover:bg-rose/10 rounded-xl border border-rose/30 transition">Delete</button>
+        </div>`;
+      container.appendChild(wrapper);
+      renderTypeSpecificFields(q);
+      setupQuestionInputListeners(sub, top, q);
+    }
+
+    function renderTypeSpecificFields(q) {
+      const container = document.getElementById('type-specific-fields'); container.innerHTML = '';
+      if (q.type === 'MCQ') {
+        const letters = ['A', 'B', 'C', 'D'];
+        let optionsHtml = q.options.map((opt, i) => `<div class="flex items-center space-x-2"><span class="w-6 text-xs font-mono font-bold text-brand-light text-right">${letters[i] || i+1}</span><input type="text" data-opt-index="${i}" value="${escapeHtml(opt)}" class="mcq-option-input flex-1 bg-ink-800 font-mono text-xs text-hi border border-ink-700 rounded-lg px-3 py-1.5 focus:outline-none focus:border-brand"></div>`).join('');
+        container.innerHTML = `
+          <div class="space-y-3">
+            <label class="block text-xs font-semibold text-lo uppercase tracking-wider">Options</label>
+            <div class="space-y-2">${optionsHtml}</div>
+            <div class="bg-ink-900/80 border border-ink-700/60 rounded-xl p-3 text-xs text-hi"><div id="preview-q-options" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div></div>
+            <div class="flex items-center space-x-4 pt-1">
+              <div class="flex items-center space-x-2"><span class="text-xs font-semibold text-lo">Correct:</span><select id="mcq-correct-select" class="bg-ink-800 text-xs font-bold text-brand-light border border-ink-700 rounded-lg px-3 py-1.5 focus:outline-none focus:border-brand">${q.options.map((_, i) => `<option value="${letters[i]}" ${q.correct === letters[i] ? 'selected' : ''}>Option ${letters[i]}</option>`).join('')}</select></div>
+              <button onclick="shuffleSingleMCQ('${q.id}')" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-ink-800 hover:bg-ink-700 border border-ink-700 text-hi transition flex items-center gap-1">🔀 Shuffle</button>
+            </div>
+          </div>`;
+      } else if (q.type === 'Fill') {
+        container.innerHTML = `<div class="space-y-2"><label class="block text-xs font-semibold text-lo uppercase tracking-wider">Correct Answer</label><input type="text" id="fill-answer-input" value="${escapeHtml(q.correct || '')}" class="w-full bg-ink-800 font-mono text-xs text-hi border border-ink-700 rounded-xl px-3 py-2 focus:outline-none focus:border-brand" placeholder="Expected answer..."><div class="bg-ink-900/80 border border-ink-700/60 rounded-xl p-3 text-xs text-hi min-h-[36px] flex items-center"><div id="preview-fill-answer" class="w-full">${q.correct ? escapeHtml(q.correct) : '<span class="text-lo italic">Preview...</span>'}</div></div></div>`;
+      } else if (q.type === 'Theory') {
+        container.innerHTML = `<div class="w-48 space-y-1"><label class="block text-xs font-semibold text-lo uppercase tracking-wider">Max Marks</label><input type="number" id="theory-marks-input" value="${q.maxMarks || 10}" min="1" class="w-full bg-ink-800 font-mono text-xs text-hi border border-ink-700 rounded-xl px-3 py-1.5 focus:outline-none focus:border-brand"></div>`;
+      }
+      updateOptionsPreviewStrip(q);
+    }
+
+    function updateOptionsPreviewStrip(q) {
+      if (q.type !== 'MCQ') return;
+      const previewEl = document.getElementById('preview-q-options'); if (!previewEl) return;
+      const letters = ['A', 'B', 'C', 'D'];
+      previewEl.innerHTML = q.options.map((opt, i) => `<div class="text-xs"><strong class="text-brand-light">${letters[i]}:</strong> ${opt ? escapeHtml(opt) : '<span class="text-lo italic">empty</span>'}</div>`).join('');
+    }
+
+    function setupQuestionInputListeners(sub, top, q) {
+      const qTextInput = document.getElementById('q-text-input'), qExpInput = document.getElementById('q-explanation-input'), typeSelect = document.getElementById('q-type-select');
+
+      // 🌟 NEW: SubTopic Input
+      const qSubTopicInput = document.getElementById('q-subtopic-input');
+      if (qSubTopicInput) {
+        qSubTopicInput.addEventListener('input', (e) => {
+          pushUndoState();
+          q.subTopic = e.target.value;
+          triggerAutoSave();
+        });
+      }
+
+      typeSelect.addEventListener('change', (e) => {
+        pushUndoState(); q.type = e.target.value;
+        if (q.type === 'MCQ') { if (!q.options || q.options.length === 0) q.options = ["Option A", "Option B", "Option C", "Option D"]; q.correct = "A"; }
+        else if (q.type === 'Fill') { q.correct = q.correct || ""; }
+        else if (q.type === 'Theory') { q.maxMarks = q.maxMarks || 10; }
+        renderApp();
+      });
+
+      qTextInput.addEventListener('input', (e) => { pushUndoState(); q.question = e.target.value; document.getElementById('preview-q-text').innerHTML = escapeHtml(q.question); triggerMathJaxDebounce(); triggerAutoSave(); });
+      qExpInput.addEventListener('input', (e) => { pushUndoState(); q.explanation = e.target.value; document.getElementById('preview-q-explanation').innerHTML = escapeHtml(q.explanation); triggerMathJaxDebounce(); triggerAutoSave(); });
+
+      if (q.type === 'MCQ') {
+        document.querySelectorAll('.mcq-option-input').forEach(input => {
+          input.addEventListener('input', (e) => { pushUndoState(); q.options[parseInt(e.target.dataset.optIndex)] = e.target.value; updateOptionsPreviewStrip(q); triggerMathJaxDebounce(); triggerAutoSave(); });
+        });
+        const correctSelect = document.getElementById('mcq-correct-select');
+        if (correctSelect) correctSelect.addEventListener('change', (e) => { pushUndoState(); q.correct = e.target.value; triggerAutoSave(); });
+      } else if (q.type === 'Fill') {
+        const fillInput = document.getElementById('fill-answer-input');
+        if (fillInput) fillInput.addEventListener('input', (e) => { pushUndoState(); q.correct = e.target.value; document.getElementById('preview-fill-answer').innerHTML = escapeHtml(q.correct); triggerMathJaxDebounce(); triggerAutoSave(); });
+      } else if (q.type === 'Theory') {
+        const marksInput = document.getElementById('theory-marks-input');
+        if (marksInput) marksInput.addEventListener('input', (e) => { pushUndoState(); q.maxMarks = parseInt(e.target.value) || 10; triggerAutoSave(); });
+      }
+    }
+
+    let mathjaxTimer = null;
+    function triggerMathJaxDebounce() { clearTimeout(mathjaxTimer); mathjaxTimer = setTimeout(triggerMathJax, 500); }
+
+    function togglePreview() {
+      isPreviewMode = !isPreviewMode;
+      document.getElementById('preview-btn-text').textContent = isPreviewMode ? "Exit Preview" : "Preview";
+      document.getElementById('preview-status').classList.toggle('hidden', !isPreviewMode);
+      renderMiddlePane(); triggerMathJax();
+    }
+
+    function renderPreviewMode(container, sub) {
+      let qs = [];
+      if (selectedPath.questionId) { const top = sub.topics.find(t => t.id === selectedPath.topicId); if (top) { const q = top.questions.find(item => item.id === selectedPath.questionId); if (q) qs.push({ topicName: top.name, q }); } }
+      else if (selectedPath.topicId) { const top = sub.topics.find(t => t.id === selectedPath.topicId); if (top) top.questions.forEach(q => qs.push({ topicName: top.name, q })); }
+      else { sub.topics.forEach(top => top.questions.forEach(q => qs.push({ topicName: top.name, q }))); }
+
+      const wrapper = document.createElement('div'); wrapper.className = "w-full max-w-3xl mx-auto space-y-8 pb-12";
+      if (!qs.length) { wrapper.innerHTML = `<div class="text-center text-lo py-12">No questions available.</div>`; container.appendChild(wrapper); return; }
+
+      qs.forEach((item, index) => {
+        const { topicName, q } = item; const isAnsRev = !!studyModeAnswersVisible[q.id]; const letters = ['A', 'B', 'C', 'D'];
+        const card = document.createElement('div'); card.className = "bg-ink-900 border border-ink-700 rounded-2xl p-4 sm:p-6 space-y-5 shadow-lg relative";
+
+        let optHtml = '';
+        if (q.type === 'MCQ') {
+          optHtml = `<div class="space-y-2 pt-2">${q.options.map((opt, i) => {
+            const letter = letters[i], isCorrect = q.correct === letter;
+            let style = "bg-ink-800/60 border-ink-700/80 text-hi";
+            if (isAnsRev && isCorrect) style = "bg-emerald/10 border-emerald/50 text-emerald-light font-semibold";
+            return `<div class="flex items-start space-x-3 p-3 rounded-xl border ${style} transition"><span class="w-5 h-5 rounded-full border border-ink-600 flex items-center justify-center text-[10px] font-bold text-mid shrink-0 mt-0.5">${letter}</span><div class="text-xs leading-relaxed flex-1">${escapeHtml(opt)}</div>${isAnsRev && isCorrect ? `<span class="text-xs font-bold text-emerald-light shrink-0">✔ Correct</span>` : ''}</div>`;
+          }).join('')}</div>`;
+        } else if (q.type === 'Fill') {
+          optHtml = `<div class="pt-2"><div class="text-xs text-lo mb-1">Expected Answer:</div><div class="bg-ink-800 border border-ink-700 rounded-xl p-3 text-xs font-mono font-bold ${isAnsRev ? 'text-amber-light' : 'text-lo blur-sm select-none'} transition">${escapeHtml(q.correct || '(No answer set)')}</div></div>`;
+        } else if (q.type === 'Theory') {
+          optHtml = `<div class="text-xs text-violet-light font-mono bg-violet-dark/20 border border-violet/30 px-3 py-1.5 rounded-lg inline-block">Max Marks: ${q.maxMarks || 10}</div>`;
+        }
+
+        card.innerHTML = `
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-ink-800 pb-3"><span class="text-xs font-mono font-bold text-brand-light">Q${index + 1} · <span class="text-lo font-normal">${escapeHtml(topicName)} ${q.subTopic ? `(${escapeHtml(q.subTopic)})` : ''}</span></span><button onclick="toggleStudyAnswer('${q.id}')" class="text-xs font-medium px-3 py-1 rounded-lg bg-ink-800 hover:bg-ink-700 border border-ink-700 text-mid hover:text-hi transition shrink-0">${isAnsRev ? '🙈 Hide' : '👁 Reveal'}</button></div>
+          <div class="text-sm font-medium text-hi leading-relaxed">${escapeHtml(q.question || '')}</div>
+          ${optHtml}
+          ${isAnsRev ? `<div class="pt-4 border-t border-ink-800 space-y-2"><span class="text-xs font-bold text-lo uppercase tracking-wider block">Explanation</span><div class="bg-ink-800/40 border border-ink-700/60 rounded-xl p-4 text-xs text-mid leading-relaxed whitespace-pre-wrap">${escapeHtml(q.explanation || 'No explanation provided.')}</div></div>` : ''}`;
+        wrapper.appendChild(card);
+      });
+      container.appendChild(wrapper);
+    }
+
+    function toggleStudyAnswer(qId) { studyModeAnswersVisible[qId] = !studyModeAnswersVisible[qId]; renderMiddlePane(); triggerMathJax(); }
+
+    function addSubject() {
+      pushUndoState(); const subId = createId('sub'), topId = createId('top'), qId = createId('q');
+      appData.subjects.push({ id: subId, name: "Untitled Subject", duration: 30, topics: [{ id: topId, name: "Untitled Topic", questions: [{ id: qId, type: "MCQ", subTopic: "", question: "Sample", options: ["A", "B", "C", "D"], correct: "A", explanation: "" }] }] });
+      selectedPath = { subjectId: subId, topicId: null, questionId: null }; saveToLocalStorage(); renderApp();
+    }
+
+    function deleteSubject(subId) {
+      const sub = appData.subjects.find(s => s.id === subId); if (!sub) return;
+      if (confirm(`Delete subject '${sub.name}'?`)) {
+        pushUndoState(); appData.subjects = appData.subjects.filter(s => s.id !== subId);
+        selectedPath = appData.subjects.length ? { subjectId: appData.subjects[0].id, topicId: null, questionId: null } : null;
+        saveToLocalStorage(); renderApp(); showToast(`Deleted`, 'Undo', undo);
+      }
+    }
+
+    function addTopic(subId) {
+      pushUndoState(); const sub = appData.subjects.find(s => s.id === subId); if (!sub) return;
+      const topId = createId('top'), qId = createId('q');
+      sub.topics.push({ id: topId, name: "Untitled Topic", questions: [{ id: qId, type: "MCQ", subTopic: "", question: "Sample", options: ["A", "B", "C", "D"], correct: "A", explanation: "" }] });
+      selectedPath = { subjectId: subId, topicId: topId, questionId: null }; saveToLocalStorage(); renderApp();
+    }
+
+    function deleteTopic(subId, topId) {
+      const sub = appData.subjects.find(s => s.id === subId); if (!sub) return;
+      if (confirm(`Delete topic?`)) {
+        pushUndoState(); sub.topics = sub.topics.filter(t => t.id !== topId); selectedPath = { subjectId: subId, topicId: null, questionId: null };
+        saveToLocalStorage(); renderApp(); showToast(`Deleted`, 'Undo', undo);
+      }
+    }
+
+    function addQuestion(subId, topId, type = 'MCQ') {
+      pushUndoState(); const sub = appData.subjects.find(s => s.id === subId); if (!sub) return;
+      const top = sub.topics.find(t => t.id === topId); if (!top) return;
+      const qId = createId('q'); const newQ = { id: qId, type: type, subTopic: "", question: "", explanation: "" };
+      if (type === 'MCQ') { newQ.options = ["A", "B", "C", "D"]; newQ.correct = "A"; }
+      else if (type === 'Fill') newQ.correct = "";
+      else if (type === 'Theory') newQ.maxMarks = 10;
+      top.questions.push(newQ); selectedPath = { subjectId: subId, topicId: topId, questionId: qId };
+      saveToLocalStorage(); renderApp();
+    }
+
+    function duplicateQuestion(subId, topId, qId) {
+      pushUndoState(); const sub = appData.subjects.find(s => s.id === subId); if (!sub) return;
+      const top = sub.topics.find(t => t.id === topId); if (!top) return;
+      const qIdx = top.questions.findIndex(q => q.id === qId); if (qIdx === -1) return;
+      const copy = JSON.parse(JSON.stringify(top.questions[qIdx])); copy.id = createId('q');
+      top.questions.splice(qIdx + 1, 0, copy); selectedPath = { subjectId: subId, topicId: topId, questionId: copy.id };
+      saveToLocalStorage(); renderApp(); showToast('Duplicated');
+    }
+
+    function deleteQuestion(subId, topId, qId) {
+      const sub = appData.subjects.find(s => s.id === subId); if (!sub) return;
+      const top = sub.topics.find(t => t.id === topId); if (!top) return;
+      const qIdx = top.questions.findIndex(q => q.id === qId); if (qIdx === -1) return;
+      if (confirm(`Delete question?`)) {
+        pushUndoState(); top.questions = top.questions.filter(q => q.id !== qId);
+        selectedPath = top.questions.length ? { subjectId: subId, topicId: topId, questionId: top.questions[Math.min(qIdx, top.questions.length - 1)].id } : { subjectId: subId, topicId: topId, questionId: null };
+        saveToLocalStorage(); renderApp(); showToast('Deleted', 'Undo', undo);
+      }
+    }
+
+    function reorderTopic(subId, index, delta) {
+      const sub = appData.subjects.find(s => s.id === subId); if (!sub) return;
+      const target = index + delta; if (target < 0 || target >= sub.topics.length) return;
+      pushUndoState(); const temp = sub.topics[index]; sub.topics[index] = sub.topics[target]; sub.topics[target] = temp;
+      saveToLocalStorage(); renderApp();
+    }
+
+    function reorderQuestion(subId, topId, index, delta) {
+      const sub = appData.subjects.find(s => s.id === subId); if (!sub) return;
+      const top = sub.topics.find(t => t.id === topId); if (!top) return;
+      const target = index + delta; if (target < 0 || target >= top.questions.length) return;
+      pushUndoState(); const temp = top.questions[index]; top.questions[index] = top.questions[target]; top.questions[target] = temp;
+      saveToLocalStorage(); renderApp();
+    }
+
+    function shuffleOptionsHelper(q) {
+      if (q.type !== 'MCQ' || !q.options || q.options.length < 2) return false;
+      const letters = ['A', 'B', 'C', 'D']; const correctIdx = letters.indexOf(q.correct);
+      if (correctIdx === -1 || correctIdx >= q.options.length) return false;
+      const correctValue = q.options[correctIdx];
+      for (let i = q.options.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [q.options[i], q.options[j]] = [q.options[j], q.options[i]]; }
+      const newCorrectIdx = q.options.indexOf(correctValue);
+      if (newCorrectIdx !== -1) q.correct = letters[newCorrectIdx];
+      return true;
+    }
+
+    function shuffleSingleMCQ(qId) {
+      pushUndoState(); let found = false;
+      appData.subjects.forEach(sub => sub.topics.forEach(top => {
+        const q = top.questions.find(item => item.id === qId); if (q) found = shuffleOptionsHelper(q);
+      }));
+      if (found) { saveToLocalStorage(); renderApp(); showToast('Shuffled'); }
+    }
+
+    function shuffleTopicMCQs(subId, topId) {
+      const sub = appData.subjects.find(s => s.id === subId); if (!sub) return;
+      const top = sub.topics.find(t => t.id === topId); if (!top) return;
+      pushUndoState(); let count = 0; top.questions.forEach(q => { if (shuffleOptionsHelper(q)) count++; });
+      saveToLocalStorage(); renderApp(); showToast(`Shuffled ${count} questions`);
+    }
+
+    /* IMPORT / EXPORT */
+    function openImportModal() {
+      document.getElementById('modal-import').classList.remove('hidden'); document.getElementById('import-paste-area').value = '';
+      document.getElementById('import-parse-result').classList.add('hidden'); document.getElementById('btn-confirm-import').disabled = true; pendingImportData = null;
+    }
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+    function triggerFileSelect() { document.getElementById('file-input-empty').click(); }
+    function handleFileSelect(e) { if (e.target.files[0]) readAndProcessImportFile(e.target.files[0]); }
+    function handleImportFileSelect(e) { if (e.target.files[0]) readAndProcessImportFile(e.target.files[0]); }
+    function handleDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('border-brand', 'bg-brand-dark/10'); }
+    function handleDragLeave(e) { e.preventDefault(); e.currentTarget.classList.remove('border-brand', 'bg-brand-dark/10'); }
+    function handleDrop(e) { e.preventDefault(); e.currentTarget.classList.remove('border-brand', 'bg-brand-dark/10'); if (e.dataTransfer.files[0]) { openImportModal(); readAndProcessImportFile(e.dataTransfer.files[0]); } }
+    
+    function readAndProcessImportFile(file) {
+      const reader = new FileReader();
+      reader.onload = (evt) => { document.getElementById('import-paste-area').value = evt.target.result; parseImportCode(evt.target.result); };
+      reader.readAsText(file);
+    }
+    function handleImportPaste() { parseImportCode(document.getElementById('import-paste-area').value); }
+
+        function parseImportCode(codeText) {
+      const resultBox = document.getElementById('import-parse-result'), summaryEl = document.getElementById('import-summary'), warningsEl = document.getElementById('import-warnings'), confirmBtn = document.getElementById('btn-confirm-import');
+      if (!codeText.trim()) { resultBox.classList.add('hidden'); confirmBtn.disabled = true; return; }
+      
+      try {
+        let mockBanks = [];
+        const execCode = `var window = { CBT_SUBJECT_BANKS: [] };\n${codeText}\nreturn window.CBT_SUBJECT_BANKS;`;
+        let parsedRaw;
+        
+        try {
+            parsedRaw = new Function(execCode)();
+        } catch (e) {
+            // If it's raw text (not wrapped in JS), just treat it as one big string
+            parsedRaw = [codeText];
+        }
+
+        if (!Array.isArray(parsedRaw) || parsedRaw.length === 0) throw new Error("No valid bank data found.");
+
+        const parsedSubjects = [], warnings = [];
+        
+        parsedRaw.forEach((rawBank) => {
+          let subName = "Imported Subject", topicsMap = {};
+          
+          if (typeof rawBank === 'string') {
+            const lines = rawBank.split('\n');
+            let currentSubject = "Imported Subject", currentTopic = "General", currentQ = null;
+            
+            lines.forEach(line => {
+              const trimmed = line.trim();
+              if (!trimmed) return;
+
+              // Smart Recovery: If a line doesn't start with a known tag, and we don't have a subject yet,
+              // assume it's the Subject name (e.g. "Bible Quiz")
+              const knownTags = ['Subject:', 'Topic:', 'SubTopic:', 'Type:', 'Q', 'Option:', 'Answer:', 'Correct:', 'Explanation:', 'Marks:', 'MaxMarks:'];
+              const isKnownTag = knownTags.some(tag => trimmed.startsWith(tag));
+              
+              if (!isKnownTag && !currentQ && currentSubject === "Imported Subject" && !trimmed.match(/^Q\d+:/)) {
+                  currentSubject = trimmed; // Auto-assign it as the subject!
+                  return;
+              }
+
+              if (trimmed.startsWith('Subject:')) currentSubject = trimmed.replace('Subject:', '').trim();
+              else if (trimmed.startsWith('Topic:')) currentTopic = trimmed.replace('Topic:', '').trim();
+              else if (trimmed.startsWith('SubTopic:')) {
+                  if (currentQ) currentQ.subTopic = trimmed.replace('SubTopic:', '').trim();
+              }
+              else if (trimmed.startsWith('Type:')) {
+                if (currentQ) { if (!topicsMap[currentTopic]) topicsMap[currentTopic] = []; topicsMap[currentTopic].push(currentQ); }
+                currentQ = { id: createId('q'), type: trimmed.replace('Type:', '').trim(), subTopic: "", question: "", options: [], correct: "A", explanation: "" };
+              } 
+              else if (trimmed.match(/^Q\d+:/)) {
+                  if (currentQ) currentQ.question = trimmed.replace(/^Q\d+:/, '').trim();
+              }
+              else if (trimmed.startsWith('Option:') && currentQ) currentQ.options.push(trimmed.replace('Option:', '').trim().replace(/^[A-D]:\s*/, ''));
+              else if ((trimmed.startsWith('Answer:') || trimmed.startsWith('Correct:')) && currentQ) currentQ.correct = trimmed.replace(/^(Answer|Correct):/, '').trim();
+              else if (trimmed.startsWith('Explanation:') && currentQ) currentQ.explanation = trimmed.replace('Explanation:', '').trim();
+            });
+            
+            if (currentQ) { if (!topicsMap[currentTopic]) topicsMap[currentTopic] = []; topicsMap[currentTopic].push(currentQ); }
+            subName = currentSubject;
+          }
+          
+          const topics = [];
+          Object.keys(topicsMap).forEach(tName => topics.push({ id: createId('top'), name: tName, questions: topicsMap[tName] }));
+          parsedSubjects.push({ id: createId('sub'), name: subName, duration: 30, topics: topics });
+        });
+
+        pendingImportData = parsedSubjects;
+        summaryEl.textContent = `Parsed: ${parsedSubjects.length} subjects`;
+        warningsEl.innerHTML = ""; resultBox.classList.remove('hidden'); confirmBtn.disabled = false;
+        document.getElementById('import-summary').className = "font-semibold text-brand-light";
+        
+      } catch (err) {
+        summaryEl.textContent = `Error: ${err.message}`; summaryEl.className = "font-semibold text-rose";
+        warningsEl.innerHTML = `<div>Check bank code format.</div>`; resultBox.classList.remove('hidden'); confirmBtn.disabled = true;
+      }
+    }
+
+    function executeImport() {
+      if (!pendingImportData) return;
+      pushUndoState();
+      const mode = document.querySelector('input[name="import-mode"]:checked').value;
+      if (mode === 'replace') { appData.subjects = pendingImportData; }
+      else {
+        pendingImportData.forEach(newSub => {
+          const existingSub = appData.subjects.find(s => s.name.toLowerCase() === newSub.name.toLowerCase());
+          if (existingSub) {
+            newSub.topics.forEach(newTop => {
+              const existingTop = existingSub.topics.find(t => t.name.toLowerCase() === newTop.name.toLowerCase());
+              if (existingTop) existingTop.questions.push(...newTop.questions); else existingSub.topics.push(newTop);
+            });
+          } else appData.subjects.push(newSub);
+        });
+      }
+      if (appData.subjects.length > 0) selectedPath = { subjectId: appData.subjects[0].id, topicId: null, questionId: null };
+      saveToLocalStorage(); closeModal('modal-import'); renderApp(); showToast('Imported!');
+    }
+
+    function openExportModal() {
+      document.getElementById('modal-export').classList.remove('hidden');
+      const slug = (appData.subjects[0]?.name || 'bank').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      document.getElementById('export-filename').value = `${slug}-bank.js`; updateExportPreview();
+    }
+
+        function generateExportJSCode(shuffle = false) {
+      let code = `window.CBT_SUBJECT_BANKS = window.CBT_SUBJECT_BANKS || [];\n\n`;
+      
+      // Helper function to double backslashes for LaTeX
+      const fixMath = (str) => {
+        if (!str) return '';
+        return String(str).replace(/\\/g, '\\\\');
+      };
+
+      appData.subjects.forEach(sub => {
+        let text = `Subject: ${sub.name}\n\n`;
+        sub.topics.forEach(top => {
+          top.questions.forEach((q, idx) => {
+            const exportQ = JSON.parse(JSON.stringify(q));
+            if (shuffle && exportQ.type === 'MCQ') shuffleOptionsHelper(exportQ);
+            
+            text += `Topic: ${top.name}\n`;
+            if (exportQ.subTopic) text += `SubTopic: ${fixMath(exportQ.subTopic)}\n`;
+            text += `Type: ${exportQ.type}\n`;
+            
+            // Fix Math for Question
+            text += `Q${String(idx + 1).padStart(3, '0')}: ${fixMath(exportQ.question)}\n`;
+            
+            if (exportQ.type === 'MCQ') { 
+              exportQ.options.forEach((opt, i) => {
+                // Fix Math for Options
+                text += `Option: ${['A','B','C','D'][i]}: ${fixMath(opt)}\n`; 
+              }); 
+              text += `Answer: ${exportQ.correct}\n`; 
+            }
+            else if (exportQ.type === 'Fill') {
+              // Fix Math for Fill answers
+              text += `Answer: ${fixMath(exportQ.correct)}\n`;
+            }
+            else if (exportQ.type === 'Theory') text += `MaxMarks: ${exportQ.maxMarks || 10}\n`;
+            
+            // Fix Math for Explanation
+            if (exportQ.explanation) text += `Explanation: ${fixMath(exportQ.explanation)}\n`;
+            text += `\n`;
+          });
+        });
+        code += `window.CBT_SUBJECT_BANKS.push(\`${text.trim()}\`);\n\n`;
+      });
+      return code.trim();
+    }
+
+    function updateExportPreview() {
+      const shuffle = document.getElementById('export-shuffle').checked, code = generateExportJSCode(shuffle);
+      document.getElementById('export-code-preview').textContent = code;
+      document.getElementById('export-stats-badge').textContent = `${(new Blob([code]).size / 1024).toFixed(1)} KB`;
+      let q = 0; appData.subjects.forEach(s => s.topics.forEach(t => q += t.questions.length));
+      document.getElementById('export-summary-info').textContent = `${appData.subjects.length} Subjects · ${q} Questions`;
+      document.getElementById('btn-download-export').disabled = false;
+    }
+
+    function copyExportCode() { navigator.clipboard.writeText(document.getElementById('export-code-preview').textContent).then(() => showToast('Copied!')); }
+    function downloadExportFile() {
+      const code = generateExportJSCode(document.getElementById('export-shuffle').checked);
+      const blob = new Blob([code], { type: 'application/javascript;charset=utf-8' });
+      const url = URL.createObjectURL(blob), a = document.createElement('a');
+      a.href = url; a.download = document.getElementById('export-filename').value || 'bank.js';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+      closeModal('modal-export'); showToast('Downloaded');
+    }
+
+    function handleSearch(query) {
+      if (!query || !query.trim()) { renderSidebarTree(); return; }
+      const qLower = query.toLowerCase().trim(), container = document.getElementById('sidebar-tree'); container.innerHTML = '';
+      appData.subjects.forEach(sub => sub.topics.forEach(top => top.questions.forEach((q, idx) => {
+        if (q.question.toLowerCase().includes(qLower) || (q.explanation || '').toLowerCase().includes(qLower) || top.name.toLowerCase().includes(qLower)) {
+          const res = document.createElement('div'); res.className = "p-2 rounded-lg bg-ink-800/60 hover:bg-ink-700 text-xs cursor-pointer space-y-0.5 border border-ink-700/60 transition";
+          res.onclick = () => selectPath(sub.id, top.id, q.id);
+          res.innerHTML = `<div class="flex items-center justify-between font-mono text-[10px]"><span class="text-brand-light font-bold">Q${String(idx + 1).padStart(3, '0')}</span><span class="text-lo truncate">${escapeHtml(top.name)}</span></div><div class="text-hi truncate">${escapeHtml(q.question || '(Empty)')}</div>`;
+          container.appendChild(res);
+        }
+      })));
+      if (container.children.length === 0) container.innerHTML = `<div class="text-center text-xs text-lo py-4">No matches</div>`;
+    }
+
+    function escapeHtml(str) {
+      if (typeof str !== 'string') return str;
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+
+        /* ==========================================================================
+       GITHUB PUBLISHING & IMPORTING
+       ========================================================================== */
+    function openPublishModal() {
+      document.getElementById('modal-publish').classList.remove('hidden');
+      
+      // Load saved credentials
+      document.getElementById('gh-owner').value = localStorage.getItem('gh_owner') || '';
+      document.getElementById('gh-repo').value = localStorage.getItem('gh_repo') || '';
+      document.getElementById('gh-token').value = localStorage.getItem('gh_token') || '';
+      
+      const slug = (appData.subjects[0]?.name || 'bank').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      document.getElementById('publish-filename').value = `${slug}-bank.js`;
+    }
+
+    async function executePublish() {
+      const owner = document.getElementById('gh-owner').value.trim();
+      const repo = document.getElementById('gh-repo').value.trim();
+      const token = document.getElementById('gh-token').value.trim();
+      const filename = document.getElementById('publish-filename').value.trim();
+
+      if (!owner || !repo || !token || !filename) {
+        showToast('Please fill all fields', 'error'); return;
+      }
+
+      // Save credentials locally so you don't type them every time
+      localStorage.setItem('gh_owner', owner);
+      localStorage.setItem('gh_repo', repo);
+      localStorage.setItem('gh_token', token);
+
+      const btn = document.getElementById('btn-do-publish');
+      btn.innerHTML = 'Publishing...'; btn.disabled = true;
+
+      // Generate the JS code
+      const code = generateExportJSCode(false);
+
+      try {
+        const response = await fetch('/api/publish-bank', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename, code, githubToken: token, repoOwner: owner, repoName: repo })
+        });
+
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error || 'Failed to publish');
+
+        showToast('Published successfully! Vercel is deploying.', 'success');
+        closeModal('modal-publish');
+      } catch (err) {
+        showToast('Error: ' + err.message, 'error');
+      } finally {
+        btn.innerHTML = 'Publish & Deploy'; btn.disabled = false;
+      }
+    }
+
+    // Function to import directly from GitHub raw URL
+        // Function to import directly from GitHub raw URL
+    async function importFromGitHub() {
+      let owner = localStorage.getItem('gh_owner');
+      let repo = localStorage.getItem('gh_repo');
+      
+      // 🌟 NEW: If credentials aren't saved, ask for them right now
+      if (!owner || !repo) {
+        owner = prompt("Enter your GitHub Username:");
+        if (!owner) return; // User cancelled
+        
+        repo = prompt("Enter your GitHub Repository Name:");
+        if (!repo) return; // User cancelled
+        
+        // Save them for next time
+        localStorage.setItem('gh_owner', owner);
+        localStorage.setItem('gh_repo', repo);
+        showToast('GitHub details saved!', 'success');
+      }
+
+      const filename = prompt("Enter the exact file name to import from the question-banks folder (e.g., physics-bank.js):");
+      if (!filename) return;
+
+      try {
+        showToast('Fetching from GitHub...', 'info');
+        const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/question-banks/${filename}`;
+        const response = await fetch(rawUrl);
+        
+        if (!response.ok) throw new Error("File not found. Make sure it's in the /question-banks/ folder and your repo is set to 'main'.");
+        
+        const codeText = await response.text();
+        document.getElementById('import-paste-area').value = codeText;
+        parseImportCode(codeText);
+        
+        document.getElementById('modal-import').classList.remove('hidden');
+        showToast('Fetched! Click Parse & Import below.', 'success');
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+
+
+      /* ==========================================================================
+       MOBILE BACK BUTTON NAVIGATION
+       ========================================================================== */
+    window.addEventListener('popstate', (e) => {
+      // If the app is currently in the editor
+      if (selectedPath) {
+        const state = e.state;
+        
+        // If there's state, restore it
+        if (state && state.subjectId) {
+          selectedPath = { subjectId: state.subjectId, topicId: state.topicId, questionId: state.questionId };
+          renderApp();
+        } else {
+          // If no state exists (they pressed back from the first subject), go back to the empty view
+          selectedPath = null;
+          renderApp();
+        }
+      }
+    });
+
+    // Seed the initial history state when the app loads
+    history.replaceState(null, '', '#builder');
+
+    
+  </script>
+
+
+  
+</body>
+</html>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en" style="overflow: hidden;">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="format-detection" content="telephone=no">
+    <title>University eduCBT</title>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/theme-aurora.css">
+
+    <!-- Tailwind (via CDN) -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <!-- MathJax config (must be inline — needs to run before MathJax loads) -->
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [['\\(', '\\)']],
+                displayMath: [['\\[', '\\]']],
+                packages: { '[+]': ['mhchem', 'ams'] }
+            },
+            options: {
+                ignoreHtmlClass: 'no-mathjax',
+                processHtmlClass: 'mathjax'
+            }
+        };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml.js" async></script>
+
+    <!-- Tesseract.js (loaded for compatibility — not used by any current module) -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+</head>
+<body class="bg-gray-100 h-screen flex flex-col overflow-hidden text-gray-800" style="overflow: hidden;">
+
+    <!-- Header -->
+    <header class="bg-green-700 text-white p-4 shadow-md z-10">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <i class="fas fa-graduation-cap text-2xl"></i>
+                <h1 class="text-xl font-bold">University eduCBT</h1>
+            </div>
+            <div id="header-actions">
+                <button onclick="event.preventDefault(); app.showLanding()" class="text-sm bg-green-800 hover:bg-green-900 px-3 py-1 rounded flex items-center gap-2">
+                    <i class="fas fa-home"></i>
+                    <span class="hidden sm:inline">Home</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main id="app-container" class="flex-grow container mx-auto p-4 overflow-auto relative"></main>
+
+    <!-- Mobile Grid Modal -->
+    <div id="mobile-grid-modal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-4 w-11/12 max-w-sm shadow-xl flex flex-col max-h-[80vh]">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <h3 class="font-bold text-gray-800">Question Navigator</h3>
+                <button onclick="event.preventDefault(); document.getElementById('mobile-grid-modal').classList.add('hidden')" class="text-gray-500 hover:text-red-500">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="flex-grow overflow-y-auto p-2" id="mobile-grid-container"></div>
+        </div>
+    </div>
+
+    <!-- Image Viewer Modal -->
+    <div id="image-modal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-4 w-11/12 max-w-6xl shadow-xl flex flex-col" style="height: 90vh;">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <div>
+                    <h3 class="font-bold text-gray-800 text-lg" id="image-modal-title">Reference Images</h3>
+                    <p id="image-folder-name" class="text-sm text-gray-500"></p>
+                </div>
+                <button onclick="event.preventDefault(); imageViewer.close()" class="text-gray-500 hover:text-red-500 text-xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <div id="image-viewer-container" class="flex-grow flex flex-col">
+                <!-- Image Toolbar -->
+                <div class="image-toolbar">
+                    <div class="flex items-center gap-1">
+                        <button onclick="imageViewer.zoomIn()" title="Zoom In"><i class="fas fa-search-plus"></i></button>
+                        <button onclick="imageViewer.zoomOut()" title="Zoom Out"><i class="fas fa-search-minus"></i></button>
+                        <button onclick="imageViewer.downloadAll()" title="Download All Images"><i class="fas fa-download"></i></button>
+                    </div>
+                    <div class="ml-auto">
+                        <span id="image-count" class="text-sm text-gray-600">0 images</span>
+                    </div>
+                </div>
+
+                <!-- Image Gallery -->
+                <div id="image-gallery" class="flex-grow overflow-auto image-gallery"></div>
+            </div>
+
+            <!-- No Images Message -->
+            <div id="no-images-message" class="hidden h-full flex items-center justify-center">
+                <div class="text-center p-8">
+                    <i class="fas fa-image text-5xl text-gray-300 mb-4"></i>
+                    <h4 class="text-xl font-bold text-gray-500 mb-2">No Images Available</h4>
+                    <p class="text-gray-400">No reference images uploaded for this subject.</p>
+                </div>
+            </div>
+
+            <div class="mt-4 pt-4 border-t flex justify-between items-center">
+                <div class="text-sm text-gray-500">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Click on any image to view full size
+                </div>
+                <button onclick="event.preventDefault(); imageViewer.close()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Topic Image Viewer Modal -->
+    <div id="topic-image-modal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-4 w-11/12 max-w-6xl shadow-xl flex flex-col" style="height: 90vh;">
+            <div class="flex justify-between items-center mb-4 border-b pb-2">
+                <div>
+                    <h3 class="font-bold text-gray-800 text-lg" id="topic-image-modal-title">Topic Images</h3>
+                    <p id="topic-image-folder-name" class="text-sm text-gray-500"></p>
+                </div>
+                <button onclick="event.preventDefault(); document.getElementById('topic-image-modal').classList.add('hidden')" class="text-gray-500 hover:text-red-500 text-xl">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div id="topic-image-gallery" class="flex-grow overflow-auto image-gallery"></div>
+            <div class="mt-4 pt-4 border-t text-right">
+                <button onclick="event.preventDefault(); document.getElementById('topic-image-modal').classList.add('hidden')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Note Viewer Modal -->
+    <div id="note-viewer-modal" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 w-full max-w-4xl shadow-xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold" id="note-viewer-title">Topic Notes</h2>
+                <button onclick="event.preventDefault(); document.getElementById('note-viewer-modal').classList.add('hidden')" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div id="note-viewer-content" class="prose max-w-none note-content"></div>
+            <div class="mt-4 pt-4 border-t text-right">
+                <button onclick="event.preventDefault(); document.getElementById('note-viewer-modal').classList.add('hidden')" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Full-Screen Explanation Viewer Modal -->
+    <div id="fullscreen-explain-modal">
+        <div class="modal-content theme-white">
+            <button class="theme-toggle-btn" onclick="window.toggleExplanationTheme(this)" title="Change background color">💡</button>
+            <button class="close-btn" onclick="document.getElementById('fullscreen-explain-modal').classList.remove('open')">
+                <i class="fas fa-times"></i>
+            </button>
+            <h2>📖 Full Screen Explanation</h2>
+            <div id="fullscreen-explain-body"></div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- SCRIPT LOAD ORDER — DO NOT REORDER                             -->
+    <!-- ============================================================ -->
+
+    <!-- 1. Foundations -->
+    <script src="js/image-viewer.js" defer></script>
+
+    <!-- 2. Core app object -->
+    <script src="js/app-core.js" defer></script>
+
+    <!-- 3. Method extensions (order among these 3 is interchangeable) -->
+    <script src="js/app-exam.js" defer></script>
+    <script src="js/app-ai.js" defer></script>
+    <script src="js/app-results.js" defer></script>
+
+    <!-- 4. Question banks — each pushes into window.CBT_SUBJECT_BANKS -->
+    <script src="question-banks/probability-bank.js" defer></script>
+    <script src="question-banks/physics-bank.js" defer></script>
+    <script src="question-banks/bible-bank.js" defer></script>
+    <script src="question-banks/linear-algebra-bank.js" defer></script>
+    <!-- add more bank files here, before question-loader.js -->
+
+    <!-- 5. Bank loader — MUST come after all *-bank.js files -->
+    <script src="question-banks/question-loader.js" defer></script>
+
+    <!-- 6. Patchers — order matters (each wraps the previous) -->
+    <script src="js/explanation-viewer.js" defer></script>
+    <script src="js/navigation.js" defer></script>
+    <script src="js/verse-popup.js" defer></script>
+    <script src="js/math-formatter.js" defer></script>
+
+    <!-- 7. Boot — MUST be last -->
+    <script src="js/init.js" defer></script>
+
+</body>
+</html>
