@@ -1,9 +1,5 @@
 // ============================================================
-// NOTE LOADER
-// Reads window.CBT_NOTE_BANKS (pushed by notes-banks/*.js),
-// parses each markdown bank into { subject, topics: [{ name, lessons }] },
-// and hands them to window.EduNotes.mergeBanks().
-// Depends on: window.EduNotes (from js/edunotes.js)
+// NOTE LOADER (Regex-Based for robust parsing)
 // ============================================================
 
 (function () {
@@ -14,67 +10,49 @@
 
     function parseBank(raw) {
         if (typeof raw !== 'string') return null;
-        const lines = raw.split('\n');
+        
+        // Split the bank into blocks based on the structure
         let subject = null;
         let description = '';
         const topics = [];
-        let currentTopic = null;
-        let lessonLines = [];
-        let inLesson = false;
 
-        function flushLesson() {
-            if (!inLesson) return;
-            const body = lessonLines.join('\n').trim();
-            if (body && currentTopic) {
-                const firstLine = body.split('\n').find(l => l.trim() && !l.trim().startsWith('---'));
-                const headingMatch = body.match(/^#\s+(.+)$/m);
-                const title = headingMatch ? headingMatch[1].trim()
-                            : (firstLine ? firstLine.replace(/^#+\s*/, '').slice(0, 80) : 'Untitled lesson');
-                currentTopic.lessons.push({ title, body });
+        // Extract Subject
+        const subjectMatch = raw.match(/Subject:\s*(.*)/i);
+        if (subjectMatch) subject = subjectMatch[1].trim();
+
+        // Extract Description
+        const descMatch = raw.match(/Description:\s*(.*)/i);
+        if (descMatch) description = descMatch[1].trim();
+
+        // Split the text into chunks by "Topic:"
+        const topicChunks = raw.split(/\nTopic:\s*/i).slice(1);
+        
+        for (const chunk of topicChunks) {
+            // The topic name is the first line of the chunk
+            const lines = chunk.split('\n');
+            const topicName = lines[0].trim();
+            const topicContent = lines.slice(1).join('\n');
+            
+            const lessons = [];
+            // Split by "Lesson:" (with or without a heading)
+            const lessonChunks = topicContent.split(/\nLesson:\s*/i).slice(1);
+            
+            for (const lChunk of lessonChunks) {
+                const lLines = lChunk.split('\n');
+                const lessonTitle = lLines[0].trim();
+                const lessonBody = lLines.slice(1).join('\n').trim();
+                
+                if (lessonTitle && lessonBody) {
+                    lessons.push({ title: lessonTitle, body: lessonBody });
+                }
             }
-            lessonLines = [];
-            inLesson = false;
+            
+            if (topicName && lessons.length > 0) {
+                topics.push({ name: topicName, lessons });
+            }
         }
 
-        function flushTopic() {
-            flushLesson();
-            if (currentTopic && currentTopic.lessons.length) topics.push(currentTopic);
-            currentTopic = null;
-        }
-
-        for (let i = 0; i < lines.length; i++) {
-            const line = lines[i];
-            const trimmed = line.trim();
-
-            const subjectMatch = line.match(/^Subject:\s*(.*)$/i);
-            if (subjectMatch) {
-                flushTopic();
-                subject = subjectMatch[1].trim();
-                continue;
-            }
-            const descMatch = line.match(/^Description:\s*(.*)$/i);
-            if (descMatch) { description = descMatch[1].trim(); continue; }
-
-            const topicMatch = line.match(/^Topic:\s*(.*)$/i);
-            if (topicMatch) {
-                flushTopic();
-                currentTopic = { name: topicMatch[1].trim(), lessons: [] };
-                continue;
-            }
-
-            const lessonMatch = line.match(/^Lesson:\s*(.*)$/i);
-            if (lessonMatch) {
-                flushLesson();
-                inLesson = true;
-                lessonLines = ['# ' + lessonMatch[1].trim()];
-                continue;
-            }
-
-            if (inLesson) lessonLines.push(line);
-        }
-        flushTopic();
-
-        if (!subject || !topics.length) return null;
+        if (!subject || topics.length === 0) return null;
         return { subject, description, topics };
     }
 
@@ -97,10 +75,12 @@
             const bank = parseBank(raw);
             if (bank) parsed.push(bank);
         }
+        
         if (!parsed.length) {
             console.warn('note-loader: no valid note banks parsed.');
             return;
         }
+        
         try {
             const n = window.EduNotes.mergeBanks(parsed);
             console.log('note-loader: merged ' + n + ' lesson(s) from ' + parsed.length + ' bank(s).');
