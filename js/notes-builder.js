@@ -1,5 +1,5 @@
 // ============================================================
-// NOTES BUILDER — full editor application
+// NOTES BUILDER — full editor application (Mobile & Desktop)
 // ============================================================
 
 'use strict';
@@ -12,11 +12,11 @@ const state = {
   subject: 'Untitled Subject',
   description: '',
   topics: [],
-  selected: { topicIdx: 0, lessonIdx: null },  // lessonIdx === null → topic editor
-  showPreview: true,
+  selected: { topicIdx: 0, lessonIdx: null, subject: false },
   device: 'mobile',
-  mode: 'edit',           // 'edit' | 'split' | 'preview'
-  dirty: false
+  mode: 'edit',
+  dirty: false,
+  mobileTreeOpen: false
 };
 
 const undo = { stack: [], redo: [] };
@@ -35,15 +35,12 @@ function init() {
   restoreUndo();
   if (!state.topics.length) {
     state.topics.push({ name: 'Introduction', lessons: [] });
-    state.selected = { topicIdx: 0, lessonIdx: null };
+    state.selected = { topicIdx: 0, lessonIdx: null, subject: false };
   }
   bindHeader();
   bindShortcuts();
   bindImportTabs();
   bindDeviceButtons();
-  document.querySelectorAll('#modal-import, #modal-export, #modal-publish, #modal-confirm, #modal-shortcuts')
-    .forEach(m => m.classList.remove('items-center'), m => m.classList.add('items-center'));
-  // ensure modals display:flex when shown
   renderAll();
 }
 
@@ -59,8 +56,7 @@ function loadState() {
       state.subject = parsed.subject || 'Untitled Subject';
       state.description = parsed.description || '';
       state.topics = parsed.topics;
-      state.selected = parsed.selected || { topicIdx: 0, lessonIdx: null };
-      state.showPreview = parsed.showPreview !== false;
+      state.selected = parsed.selected || { topicIdx: 0, lessonIdx: null, subject: false };
       state.device = parsed.device || 'mobile';
       state.mode = parsed.mode || 'edit';
     }
@@ -86,16 +82,17 @@ function persist() {
       description: state.description,
       topics: state.topics,
       selected: state.selected,
-      showPreview: state.showPreview,
       device: state.device,
       mode: state.mode
     }));
     localStorage.setItem(LS_UNDO, JSON.stringify({ stack: undo.stack.slice(-10) }));
     flashSaved('Saved');
-    document.getElementById('save-status').textContent = 'Saved ' + new Date().toLocaleTimeString();
+    const status = document.getElementById('save-status');
+    if (status) status.textContent = 'Saved ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
   } catch (e) {
     flashSaved('Storage unavailable', true);
-    document.getElementById('save-status').textContent = 'Not saved: storage unavailable';
+    const status = document.getElementById('save-status');
+    if (status) status.textContent = 'Not saved: storage unavailable';
   }
 }
 
@@ -170,36 +167,57 @@ function updateUndoButtons() {
 }
 
 /* ============================================================
-   HEADER EVENTS
+   HEADER EVENTS & MOBILE NAVIGATION
    ============================================================ */
 function bindHeader() {
   const subjectInput = document.getElementById('subject-input');
-  subjectInput.value = state.subject;
-  subjectInput.addEventListener('input', e => {
-    snapshot();
-    state.subject = e.target.value;
-    scheduleSave();
-  });
+  if (subjectInput) {
+    subjectInput.value = state.subject;
+    subjectInput.addEventListener('input', e => {
+      snapshot();
+      state.subject = e.target.value;
+      updateMobileSubjectLabel();
+      scheduleSave();
+    });
+  }
   document.getElementById('btn-undo').onclick = doUndo;
   document.getElementById('btn-redo').onclick = doRedo;
-  document.getElementById('btn-preview-toggle').onclick = () => {
-    state.showPreview = !state.showPreview;
-    document.getElementById('right-panel').classList.toggle('hidden', !state.showPreview);
-    if (state.showPreview) renderPreview();
-    scheduleSave();
-  };
-  document.getElementById('validation-btn').onclick = showValidationModal;
   document.getElementById('tree-search').addEventListener('input', renderTree);
 }
 
-function confirmLeave() {
-  if (!state.dirty) return true;
-  return confirm('Unsaved changes. Leave anyway?');
+function updateMobileSubjectLabel() {
+  const btn = document.getElementById('mobile-subject-btn');
+  if (btn) btn.textContent = state.subject || 'Untitled Subject';
 }
 
-/* ============================================================
-   KEYBOARD SHORTCUTS
-   ============================================================ */
+function toggleMobileTree() {
+  state.mobileTreeOpen = !state.mobileTreeOpen;
+  const panel = document.getElementById('left-panel');
+  const backdrop = document.getElementById('mobile-backdrop');
+  if (state.mobileTreeOpen) {
+    panel.classList.remove('-translate-x-full');
+    backdrop.classList.remove('hidden');
+  } else {
+    panel.classList.add('-translate-x-full');
+    backdrop.classList.add('hidden');
+  }
+}
+
+function toggleMobilePreview() {
+  const modal = document.getElementById('modal-preview');
+  if (modal.classList.contains('hidden')) {
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    renderPreview();
+    const content = document.getElementById('mobile-preview-content');
+    content.innerHTML = document.getElementById('preview-content').innerHTML;
+    hydrateMath(content);
+  } else {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+  }
+}
+
 function bindShortcuts() {
   document.addEventListener('keydown', e => {
     const cmd = e.ctrlKey || e.metaKey;
@@ -211,15 +229,12 @@ function bindShortcuts() {
     if (cmd && key === 'y') { e.preventDefault(); doRedo(); return; }
     if (cmd && key === 'b') { e.preventDefault(); insertFormat('bold'); return; }
     if (cmd && key === 'i') { e.preventDefault(); insertFormat('italic'); return; }
-    if (cmd && key === 'p') { e.preventDefault(); document.getElementById('btn-preview-toggle').click(); return; }
-    if (cmd && e.shiftKey && key === 'i') { e.preventDefault(); openImportModal(); return; }
-    if (cmd && e.shiftKey && key === 'e') { e.preventDefault(); openExportModal(); return; }
     if (e.key === 'Escape') {
-      document.querySelectorAll('.fixed.inset-0:not(.hidden)').forEach(m => m.classList.add('hidden'));
-    }
-    if (e.key === '?' && !e.target.matches('input, textarea')) {
-      e.preventDefault();
-      openModal('modal-shortcuts');
+      document.querySelectorAll('.fixed.inset-0:not(.hidden)').forEach(m => {
+        m.classList.add('hidden');
+        m.classList.remove('flex');
+      });
+      if (state.mobileTreeOpen) toggleMobileTree();
     }
   });
 }
@@ -235,7 +250,7 @@ function renderTree() {
 
   if (!state.topics.length) {
     const empty = document.createElement('div');
-    empty.className = 'text-center text-lo text-xs py-8 px-2';
+    empty.className = 'text-center text-lo text-sm py-8 px-2';
     empty.textContent = 'No topics yet. Click "+ New topic" to start.';
     container.appendChild(empty);
     return;
@@ -249,62 +264,54 @@ function renderTree() {
     if (query && !topicMatches && matchingLessons.length === 0) return;
 
     const wrapper = document.createElement('div');
-    wrapper.className = 'mb-1';
+    wrapper.className = 'mb-2';
 
+    // Topic Row
     const row = document.createElement('div');
     const isTopicSel = state.selected.topicIdx === ti && state.selected.lessonIdx === null;
-    row.className = 'flex items-center justify-between px-2 py-1.5 rounded text-xs cursor-pointer transition ' +
+    row.className = 'flex items-center justify-between px-3 py-3 min-h-[44px] rounded-lg text-sm cursor-pointer transition ' +
       (isTopicSel ? 'bg-brand-dark/30 text-brand-light border border-brand/40' : 'text-mid hover:bg-ink-800');
     row.setAttribute('role', 'treeitem');
     row.setAttribute('aria-expanded', 'true');
-    row.innerHTML = `<span class="truncate flex-1">📂 ${escapeHtml(topic.name)}</span>
-      <span class="text-[10px] text-lo font-mono ml-2">${topic.lessons.length}</span>`;
-    row.onclick = () => { state.selected = { topicIdx: ti, lessonIdx: null }; renderAll(); };
+    row.innerHTML = `<span class="truncate flex-1 font-semibold">📂 ${escapeHtml(topic.name)}</span>
+      <span class="text-xs text-lo font-mono ml-2 bg-ink-800 px-1.5 py-0.5 rounded">${topic.lessons.length}</span>`;
+    row.onclick = () => {
+      state.selected = { topicIdx: ti, lessonIdx: null, subject: false };
+      renderAll();
+      if (window.innerWidth < 900) toggleMobileTree(); // Auto-close on mobile
+    };
     row.oncontextmenu = e => showTopicContext(e, ti);
     wrapper.appendChild(row);
 
+    // Lessons
     const lessonWrap = document.createElement('div');
-    lessonWrap.className = 'ml-3 border-l border-ink-800 space-y-0.5';
-    lessonWrap.setAttribute('role', 'group');
+    lessonWrap.className = 'ml-3 pl-3 border-l border-ink-700 space-y-1 mt-1';
 
     (query ? matchingLessons : topic.lessons.map((l, li) => ({ l, li }))).forEach(({ l, li }) => {
       const isSel = state.selected.topicIdx === ti && state.selected.lessonIdx === li;
       const lRow = document.createElement('div');
-      lRow.className = 'flex items-center gap-1 px-2 py-1 rounded text-xs cursor-pointer transition ' +
+      lRow.className = 'flex items-center gap-2 px-2 py-2.5 min-h-[40px] rounded-md text-sm cursor-pointer transition ' +
         (isSel ? 'bg-brand-dark/30 text-brand-light border border-brand/40' : 'text-lo hover:bg-ink-800/60');
-      lRow.setAttribute('role', 'treeitem');
-      lRow.draggable = true;
-      lRow.dataset.topicIdx = ti;
-      lRow.dataset.lessonIdx = li;
+      
       const status = !l.body?.trim() ? 'bg-amber' : (validateLessonText(l.body).length ? 'bg-rose' : 'bg-brand');
-      lRow.innerHTML = `<span class="w-1.5 h-1.5 rounded-full ${status} shrink-0"></span>
-        <span class="truncate flex-1">${escapeHtml(l.title || 'Untitled lesson')}</span>`;
-      lRow.onclick = e => { e.stopPropagation(); state.selected = { topicIdx: ti, lessonIdx: li }; renderAll(); };
+      
+      lRow.innerHTML = `<span class="w-2 h-2 rounded-full ${status} shrink-0"></span>
+        <span class="truncate flex-1 leading-tight">${escapeHtml(l.title || 'Untitled lesson')}</span>`;
+      
+      lRow.onclick = e => {
+        e.stopPropagation();
+        state.selected = { topicIdx: ti, lessonIdx: li, subject: false };
+        renderAll();
+        if (window.innerWidth < 900) toggleMobileTree(); // Auto-close on mobile
+      };
       lRow.oncontextmenu = e => showLessonContext(e, ti, li);
-      lRow.addEventListener('dragstart', ev => {
-        ev.dataTransfer.setData('text/plain', JSON.stringify({ ti, li }));
-        ev.dataTransfer.effectAllowed = 'move';
-      });
-      lRow.addEventListener('dragover', ev => {
-        ev.preventDefault();
-        ev.dataTransfer.dropEffect = 'move';
-        lRow.classList.add('bg-brand-dark/20');
-      });
-      lRow.addEventListener('dragleave', () => lRow.classList.remove('bg-brand-dark/20'));
-      lRow.addEventListener('drop', ev => {
-        ev.preventDefault();
-        lRow.classList.remove('bg-brand-dark/20');
-        try {
-          const from = JSON.parse(ev.dataTransfer.getData('text/plain'));
-          moveLesson(from.ti, from.li, ti, li);
-        } catch {}
-      });
+      
       lessonWrap.appendChild(lRow);
     });
 
     const addBtn = document.createElement('button');
-    addBtn.className = 'w-full text-left px-2 py-1 text-[10px] text-lo hover:text-brand-light';
-    addBtn.textContent = '+ Add lesson';
+    addBtn.className = 'w-full text-left px-2 py-2 text-xs text-lo hover:text-brand-light min-h-[40px] mt-1 rounded-md hover:bg-ink-800/50';
+    addBtn.innerHTML = '<span class="text-brand-light font-bold mr-1">+</span> Add lesson';
     addBtn.onclick = e => { e.stopPropagation(); addLesson(ti); };
     lessonWrap.appendChild(addBtn);
     wrapper.appendChild(lessonWrap);
@@ -320,7 +327,7 @@ function showTopicContext(e, ti) {
     snapshot();
     state.topics.splice(ti, 1);
     if (!state.topics.length) state.topics.push({ name: 'Introduction', lessons: [] });
-    state.selected = { topicIdx: 0, lessonIdx: null };
+    state.selected = { topicIdx: 0, lessonIdx: null, subject: false };
     renderAll();
     scheduleSave();
   }
@@ -332,22 +339,10 @@ function showLessonContext(e, ti, li) {
   if (confirm(`Delete lesson "${lesson.title}"?`)) {
     snapshot();
     state.topics[ti].lessons.splice(li, 1);
-    state.selected = { topicIdx: ti, lessonIdx: null };
+    state.selected = { topicIdx: ti, lessonIdx: null, subject: false };
     renderAll();
     scheduleSave();
   }
-}
-
-function moveLesson(fromTi, fromLi, toTi, toLi) {
-  if (fromTi === toTi && fromLi === toLi) return;
-  snapshot();
-  const lesson = state.topics[fromTi].lessons.splice(fromLi, 1)[0];
-  if (!lesson) return;
-  if (fromTi === toTi && fromLi < toLi) toLi--;
-  state.topics[toTi].lessons.splice(toLi, 0, lesson);
-  state.selected = { topicIdx: toTi, lessonIdx: toLi };
-  renderAll();
-  scheduleSave();
 }
 
 /* ============================================================
@@ -356,29 +351,33 @@ function moveLesson(fromTi, fromLi, toTi, toLi) {
 function addTopic() {
   snapshot();
   state.topics.push({ name: 'New topic', lessons: [] });
-  state.selected = { topicIdx: state.topics.length - 1, lessonIdx: null };
+  state.selected = { topicIdx: state.topics.length - 1, lessonIdx: null, subject: false };
   renderAll();
   scheduleSave();
+  if (window.innerWidth < 900) toggleMobileTree();
 }
 
 function addLesson(topicIdx) {
   snapshot();
   state.topics[topicIdx].lessons.push({ title: 'New lesson', body: '# New lesson\n\nStart writing here.\n' });
-  state.selected = { topicIdx, lessonIdx: state.topics[topicIdx].lessons.length - 1 };
+  state.selected = { topicIdx, lessonIdx: state.topics[topicIdx].lessons.length - 1, subject: false };
   renderAll();
   scheduleSave();
+  if (window.innerWidth < 900) toggleMobileTree();
   setTimeout(() => document.getElementById('lesson-title')?.focus(), 80);
 }
 
 function selectSubject() {
   state.selected = { topicIdx: state.selected.topicIdx, lessonIdx: null, subject: true };
   renderAll();
+  if (window.innerWidth < 900 && state.mobileTreeOpen) toggleMobileTree();
 }
 
 /* ============================================================
    RENDER CENTER PANE
    ============================================================ */
 function renderAll() {
+  updateMobileSubjectLabel();
   renderTree();
   renderCenter();
   renderPreview();
@@ -411,27 +410,33 @@ function renderCenter() {
 
 function renderSubjectEditor() {
   const wrap = document.createElement('div');
-  wrap.className = 'max-w-2xl mx-auto p-6 space-y-6';
+  wrap.className = 'w-full max-w-2xl mx-auto p-4 sm:p-6 space-y-6 pb-20';
   wrap.innerHTML = `
+    <div class="flex items-center gap-3 mb-4">
+      <button onclick="state.selected.subject=false; renderAll();" class="sm:hidden p-2 -ml-2 text-mid hover:text-hi">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+      </button>
+      <h2 class="text-lg font-bold text-hi">Bank settings</h2>
+    </div>
     <div>
-      <h2 class="text-lg font-bold text-hi mb-4">Bank settings</h2>
       <label class="block text-xs font-semibold text-lo uppercase tracking-wider mb-1">Subject name</label>
       <input id="settings-subject" type="text" value="${escapeHtml(state.subject)}"
-        class="w-full bg-ink-800 text-base font-bold text-hi border border-ink-700 rounded-xl px-4 py-2.5 focus:outline-none focus:border-brand">
+        class="w-full bg-ink-800 text-base font-bold text-hi border border-ink-700 rounded-xl px-4 py-3 focus:outline-none focus:border-brand min-h-[44px]">
       <label class="block text-xs font-semibold text-lo uppercase tracking-wider mb-1 mt-4">Description (optional)</label>
-      <textarea id="settings-description" rows="2"
-        class="w-full bg-ink-800 text-sm text-hi border border-ink-700 rounded-xl px-4 py-2 focus:outline-none focus:border-brand">${escapeHtml(state.description)}</textarea>
+      <textarea id="settings-description" rows="3"
+        class="w-full bg-ink-800 text-sm text-hi border border-ink-700 rounded-xl px-4 py-3 focus:outline-none focus:border-brand">${escapeHtml(state.description)}</textarea>
     </div>
     <div class="pt-4 border-t border-ink-700">
-      <p class="text-xs text-lo">${state.topics.length} topics · ${totalLessons()} lessons · ~${totalMinutes()} min reading</p>
+      <p class="text-sm text-lo">${state.topics.length} topics · ${totalLessons()} lessons · ~${totalMinutes()} min reading</p>
     </div>
-    <div class="pt-4 border-t border-ink-700 flex justify-between">
-      <button onclick="deleteBank()" class="px-4 py-2 text-xs font-semibold text-rose hover:bg-rose/10 rounded-xl border border-rose/30">Delete entire bank</button>
+    <div class="pt-4 border-t border-ink-700">
+      <button onclick="deleteBank()" class="w-full sm:w-auto px-6 py-3 text-sm font-semibold text-rose hover:bg-rose/10 rounded-xl border border-rose/30 min-h-[44px]">Delete entire bank</button>
     </div>`;
   setTimeout(() => {
     document.getElementById('settings-subject').addEventListener('input', e => {
       snapshot(); state.subject = e.target.value;
-      document.getElementById('subject-input').value = state.subject;
+      updateMobileSubjectLabel();
+      if (document.getElementById('subject-input')) document.getElementById('subject-input').value = state.subject;
       scheduleSave();
     });
     document.getElementById('settings-description').addEventListener('input', e => {
@@ -444,20 +449,26 @@ function renderSubjectEditor() {
 function renderTopicEditor(ti) {
   const topic = state.topics[ti];
   const wrap = document.createElement('div');
-  wrap.className = 'max-w-2xl mx-auto p-6 space-y-5';
+  wrap.className = 'w-full max-w-2xl mx-auto p-4 sm:p-6 space-y-6 pb-20';
   wrap.innerHTML = `
+    <div class="flex items-center gap-3 mb-2">
+      <button onclick="state.selected.lessonIdx=null; state.mobileTreeOpen=false; document.getElementById('left-panel').classList.remove('-translate-x-full'); document.getElementById('mobile-backdrop').classList.remove('hidden');" class="sm:hidden p-2 -ml-2 text-mid hover:text-hi">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+      </button>
+      <h2 class="text-lg font-bold text-hi">Edit Topic</h2>
+    </div>
     <div>
       <label class="block text-xs font-semibold text-lo uppercase tracking-wider mb-1">Topic name</label>
       <input id="topic-name" type="text" value="${escapeHtml(topic.name)}"
-        class="w-full bg-ink-800 text-lg font-bold text-hi border border-ink-700 rounded-xl px-4 py-2.5 focus:outline-none focus:border-brand">
+        class="w-full bg-ink-800 text-lg font-bold text-hi border border-ink-700 rounded-xl px-4 py-3 focus:outline-none focus:border-brand min-h-[44px]">
     </div>
     <div class="bg-ink-900 border border-ink-700 rounded-xl p-4">
-      <p class="text-xs font-semibold text-lo uppercase tracking-wider mb-2">${topic.lessons.length} lessons in this topic</p>
-      ${topic.lessons.length ? `<ul class="space-y-1 text-xs text-mid">${topic.lessons.map((l, i) => `<li class="flex items-center justify-between"><span>${i + 1}. ${escapeHtml(l.title)}</span><span class="text-lo">${estimateMinutes(l.body)} min</span></li>`).join('')}</ul>` : '<p class="text-xs text-lo italic">No lessons yet.</p>'}
+      <p class="text-xs font-semibold text-lo uppercase tracking-wider mb-3">${topic.lessons.length} lessons in this topic</p>
+      ${topic.lessons.length ? `<ul class="space-y-2 text-sm text-mid">${topic.lessons.map((l, i) => `<li class="flex items-center justify-between gap-2"><span class="truncate">${i + 1}. ${escapeHtml(l.title)}</span><span class="text-lo shrink-0 text-xs">${estimateMinutes(l.body)} min</span></li>`).join('')}</ul>` : '<p class="text-sm text-lo italic">No lessons yet.</p>'}
     </div>
-    <div class="flex justify-between pt-4 border-t border-ink-700">
-      <button onclick="deleteTopic(${ti})" class="px-4 py-2 text-xs font-semibold text-rose hover:bg-rose/10 rounded-xl border border-rose/30">Delete topic</button>
-      <button onclick="addLesson(${ti})" class="px-4 py-2 text-xs font-semibold bg-brand text-ink-900 rounded-xl hover:bg-brand-light">+ Add lesson</button>
+    <div class="flex flex-col sm:flex-row gap-3 pt-4 border-t border-ink-700">
+      <button onclick="deleteTopic(${ti})" class="w-full sm:w-auto px-6 py-3 text-sm font-semibold text-rose bg-rose/5 hover:bg-rose/10 rounded-xl border border-rose/30 min-h-[44px]">Delete topic</button>
+      <button onclick="addLesson(${ti})" class="w-full sm:flex-1 px-6 py-3 text-sm font-semibold bg-brand text-ink-900 rounded-xl hover:bg-brand-light min-h-[44px]">+ Add lesson</button>
     </div>`;
   setTimeout(() => {
     document.getElementById('topic-name').addEventListener('input', e => {
@@ -472,7 +483,7 @@ function deleteTopic(ti) {
   snapshot();
   state.topics.splice(ti, 1);
   if (!state.topics.length) state.topics.push({ name: 'Introduction', lessons: [] });
-  state.selected = { topicIdx: 0, lessonIdx: null };
+  state.selected = { topicIdx: 0, lessonIdx: null, subject: false };
   renderAll(); scheduleSave();
 }
 
@@ -480,9 +491,9 @@ function deleteBank() {
   if (!confirm('Delete the entire bank? This cannot be undone except with Ctrl+Z.')) return;
   snapshot();
   state.topics = [{ name: 'Introduction', lessons: [] }];
-  state.selected = { topicIdx: 0, lessonIdx: null };
+  state.selected = { topicIdx: 0, lessonIdx: null, subject: false };
   state.subject = 'Untitled Subject';
-  document.getElementById('subject-input').value = state.subject;
+  if (document.getElementById('subject-input')) document.getElementById('subject-input').value = state.subject;
   renderAll(); scheduleSave();
 }
 
@@ -492,55 +503,63 @@ function renderLessonEditor(ti, li) {
   const wrap = document.createElement('div');
   wrap.className = 'h-full flex flex-col';
   wrap.innerHTML = `
-    <div class="px-5 py-3 border-b border-ink-700/60 bg-ink-900/40 flex items-center justify-between gap-2 shrink-0">
-      <div class="text-[10px] font-mono text-lo truncate">TOPIC · ${escapeHtml(topic.name)}</div>
-      <div class="flex gap-1">
+    <div class="px-4 py-3 border-b border-ink-700/60 bg-ink-900/40 flex items-center justify-between gap-2 shrink-0">
+      <div class="flex items-center gap-2 min-w-0">
+        <button onclick="state.mobileTreeOpen=false; document.getElementById('left-panel').classList.remove('-translate-x-full'); document.getElementById('mobile-backdrop').classList.remove('hidden');" class="sm:hidden p-1.5 -ml-1 text-mid hover:text-hi rounded-md">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+        </button>
+        <div class="text-[10px] font-mono text-lo truncate">TOPIC · ${escapeHtml(topic.name)}</div>
+      </div>
+      <div class="flex gap-1 shrink-0">
         <button onclick="duplicateLesson(${ti}, ${li})" class="px-2 py-1 text-[10px] rounded bg-ink-800 hover:bg-ink-700 border border-ink-700 text-mid hover:text-hi">Duplicate</button>
         <button onclick="deleteLesson(${ti}, ${li})" class="px-2 py-1 text-[10px] rounded bg-rose/10 hover:bg-rose/20 border border-rose/30 text-rose-light">Delete</button>
       </div>
     </div>
-    <div class="px-5 pt-4 shrink-0">
+    <div class="px-4 sm:px-5 pt-4 shrink-0">
       <label class="block text-[10px] font-semibold text-lo uppercase tracking-wider mb-1">Lesson title</label>
       <input id="lesson-title" type="text" value="${escapeHtml(lesson.title)}"
-        class="w-full bg-transparent text-xl font-bold text-hi border-b border-ink-700 pb-1 focus:outline-none focus:border-brand">
+        class="w-full bg-transparent text-lg sm:text-xl font-bold text-hi border-b border-ink-700 pb-2 focus:outline-none focus:border-brand">
     </div>
-    <div class="px-5 pt-3 flex items-center gap-1 flex-wrap shrink-0 border-b border-ink-700/60 pb-3">
-      <button data-format="bold" class="toolbar-btn" title="Bold (Ctrl+B)"><strong>B</strong></button>
-      <button data-format="italic" class="toolbar-btn" title="Italic (Ctrl+I)"><em>I</em></button>
-      <span class="w-px h-4 bg-ink-700 mx-1"></span>
-      <button data-format="h1" class="toolbar-btn">H1</button>
-      <button data-format="h2" class="toolbar-btn">H2</button>
-      <span class="w-px h-4 bg-ink-700 mx-1"></span>
-      <button data-format="link" class="toolbar-btn" title="Link">🔗</button>
-      <button data-format="list" class="toolbar-btn" title="Bullet list">•</button>
-      <button data-format="tasks" class="toolbar-btn" title="Task list">✓</button>
-      <button data-format="code" class="toolbar-btn" title="Code block">&lt;/&gt;</button>
-      <span class="w-px h-4 bg-ink-700 mx-1"></span>
-      <button data-format="math" class="toolbar-btn" title="Math block">Σ</button>
-      <button data-format="quiz" class="toolbar-btn" title="Quiz block">?</button>
-      <button data-format="callout" class="toolbar-btn" title="Callout">💡</button>
-      <button data-format="steps" class="toolbar-btn" title="Steps">≡</button>
-      <button data-format="video" class="toolbar-btn" title="Video">▶</button>
+    <div class="px-4 sm:px-5 pt-3 flex items-center gap-1 flex-wrap shrink-0 border-b border-ink-700/60 pb-3">
+      <button data-format="bold" class="toolbar-btn min-w-[36px] min-h-[36px] flex items-center justify-center rounded hover:bg-ink-800 text-hi" title="Bold"><strong>B</strong></button>
+      <button data-format="italic" class="toolbar-btn min-w-[36px] min-h-[36px] flex items-center justify-center rounded hover:bg-ink-800 text-hi" title="Italic"><em>I</em></button>
+      <span class="w-px h-5 bg-ink-700 mx-1"></span>
+      <button data-format="h1" class="toolbar-btn min-w-[36px] min-h-[36px] flex items-center justify-center rounded hover:bg-ink-800 text-hi text-sm font-bold">H1</button>
+      <button data-format="h2" class="toolbar-btn min-w-[36px] min-h-[36px] flex items-center justify-center rounded hover:bg-ink-800 text-hi text-sm font-bold">H2</button>
+      <span class="w-px h-5 bg-ink-700 mx-1"></span>
+      <button data-format="link" class="toolbar-btn min-w-[36px] min-h-[36px] flex items-center justify-center rounded hover:bg-ink-800 text-hi" title="Link">🔗</button>
+      <button data-format="list" class="toolbar-btn min-w-[36px] min-h-[36px] flex items-center justify-center rounded hover:bg-ink-800 text-hi" title="List">•</button>
+      <button data-format="code" class="toolbar-btn min-w-[36px] min-h-[36px] flex items-center justify-center rounded hover:bg-ink-800 text-hi" title="Code">&lt;/&gt;</button>
+      <span class="w-px h-5 bg-ink-700 mx-1"></span>
+      <button data-format="math" class="toolbar-btn min-w-[36px] min-h-[36px] flex items-center justify-center rounded hover:bg-ink-800 text-hi" title="Math">Σ</button>
+      <button data-format="quiz" class="toolbar-btn min-w-[36px] min-h-[36px] flex items-center justify-center rounded hover:bg-ink-800 text-hi" title="Quiz">?</button>
+      <button data-format="callout" class="toolbar-btn min-w-[36px] min-h-[36px] flex items-center justify-center rounded hover:bg-ink-800 text-hi" title="Callout">💡</button>
     </div>
-    <div class="flex-1 flex min-h-0">
-      <div class="flex-1 flex flex-col min-w-0">
-        <div class="flex bg-ink-900/60 border-b border-ink-700/60 shrink-0">
-          <button class="mode-tab px-3 py-1.5 text-xs" data-mode="edit">Edit</button>
-          <button class="mode-tab px-3 py-1.5 text-xs" data-mode="split">Split</button>
-          <button class="mode-tab px-3 py-1.5 text-xs" data-mode="preview">Preview</button>
-        </div>
-        <div class="flex-1 flex min-h-0 relative">
-          <textarea id="lesson-body" spellcheck="false"
-            class="editor-pane flex-1 bg-canvas text-hi font-mono text-xs p-4 resize-none focus:outline-none"
-            style="tab-size:2">${escapeHtml(lesson.body)}</textarea>
-          <div id="inline-preview" class="hidden flex-1 overflow-y-auto p-4 border-l border-ink-700 bg-ink-900">
-            <div class="preview-body" id="inline-preview-content"></div>
-          </div>
-        </div>
-      </div>
+    <div class="flex-1 flex min-h-0 relative">
+      <textarea id="lesson-body" spellcheck="false"
+        class="editor-pane w-full bg-canvas text-hi font-mono text-sm sm:text-xs p-4 resize-none focus:outline-none pb-20 sm:pb-4"
+        style="tab-size:2">${escapeHtml(lesson.body)}</textarea>
     </div>`;
   setTimeout(() => bindLessonEditor(ti, li), 0);
   return wrap;
+}
+
+function duplicateLesson(ti, li) {
+  snapshot();
+  const lesson = state.topics[ti].lessons[li];
+  const copy = JSON.parse(JSON.stringify(lesson));
+  copy.title += ' (Copy)';
+  state.topics[ti].lessons.splice(li + 1, 0, copy);
+  state.selected = { topicIdx: ti, lessonIdx: li + 1, subject: false };
+  renderAll(); scheduleSave();
+}
+
+function deleteLesson(ti, li) {
+  if (!confirm('Delete this lesson?')) return;
+  snapshot();
+  state.topics[ti].lessons.splice(li, 1);
+  state.selected = { topicIdx: ti, lessonIdx: null, subject: false };
+  renderAll(); scheduleSave();
 }
 
 function bindLessonEditor(ti, li) {
@@ -564,7 +583,6 @@ function bindLessonEditor(ti, li) {
     clearTimeout(previewTimer);
     previewTimer = setTimeout(() => {
       renderPreview();
-      renderInlinePreview();
     }, 400);
   });
 
@@ -575,47 +593,11 @@ function bindLessonEditor(ti, li) {
       bodyInput.setRangeText('  ', start, end, 'end');
       bodyInput.dispatchEvent(new Event('input', { bubbles: true }));
     }
-    if (e.key === 'Enter') {
-      const before = bodyInput.value.slice(0, bodyInput.selectionStart);
-      const line = before.split('\n').pop();
-      const listMatch = line.match(/^(\s*)([-*]|\d+\.)\s/);
-      if (listMatch) {
-        e.preventDefault();
-        const prefix = '\n' + listMatch[1] + listMatch[2] + ' ';
-        bodyInput.setRangeText(prefix, bodyInput.selectionStart, bodyInput.selectionEnd, 'end');
-        bodyInput.dispatchEvent(new Event('input', { bubbles: true }));
-      }
-    }
   });
 
   document.querySelectorAll('.toolbar-btn').forEach(btn => {
     btn.onclick = () => insertFormat(btn.dataset.format);
   });
-  document.querySelectorAll('.mode-tab').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.mode === state.mode);
-    btn.onclick = () => { state.mode = btn.dataset.mode; renderCenter(); scheduleSave(); };
-  });
-
-  const inlinePreview = document.getElementById('inline-preview');
-  if (state.mode === 'split') inlinePreview?.classList.remove('hidden');
-  else inlinePreview?.classList.add('hidden');
-  if (state.mode === 'preview') {
-    bodyInput.style.display = 'none';
-    inlinePreview?.classList.remove('hidden');
-    inlinePreview.style.flex = '1';
-    inlinePreview.style.borderLeft = '0';
-  }
-  renderInlinePreview();
-}
-
-function renderInlinePreview() {
-  const el = document.getElementById('inline-preview-content');
-  if (!el) return;
-  const li = state.selected.lessonIdx;
-  if (li == null) return;
-  const lesson = state.topics[state.selected.topicIdx].lessons[li];
-  el.innerHTML = renderMarkdown(lesson.body);
-  if (window.katex) hydrateMath(el);
 }
 
 /* ============================================================
@@ -649,7 +631,7 @@ function insertFormat(type) {
 }
 
 /* ============================================================
-   MARKDOWN RENDERER (matches EduNotes)
+   MARKDOWN RENDERER
    ============================================================ */
 function renderMarkdown(source) {
   if (!source) return '<p class="text-lo italic">No content yet.</p>';
@@ -681,7 +663,6 @@ function renderMarkdown(source) {
     div.innerHTML = blocks[idx] || '';
     node.replaceWith(div.firstElementChild || div);
   });
-  // Protect $...$ math before it's eaten
   container.querySelectorAll('p, li, td, th, span, strong, em').forEach(el => {
     el.innerHTML = wrapMath(el.innerHTML);
   });
@@ -801,7 +782,8 @@ function applyDevice() {
   const w = widths[state.device] || 390;
   el.style.maxWidth = w + 'px';
   el.style.margin = '0 auto';
-  document.getElementById('preview-width-label').textContent = w + ' px';
+  const label = document.getElementById('preview-width-label');
+  if (label) label.textContent = w + ' px';
   document.querySelectorAll('.device-btn').forEach(b => {
     b.classList.toggle('text-brand-light', b.dataset.device === state.device);
     b.classList.toggle('bg-ink-800', b.dataset.device === state.device);
@@ -818,16 +800,18 @@ function bindDeviceButtons() {
    WORD COUNT / VALIDATION
    ============================================================ */
 function updateWordCount() {
+  const el = document.getElementById('word-count');
+  if (!el) return;
   const li = state.selected.lessonIdx;
   if (li == null) {
-    document.getElementById('word-count').textContent = totalLessons() + ' lessons · ' + totalMinutes() + ' min total';
+    el.textContent = totalLessons() + ' lessons · ' + totalMinutes() + ' min total';
     return;
   }
   const lesson = state.topics[state.selected.topicIdx]?.lessons[li];
   if (!lesson) return;
   const words = countWords(lesson.body || '');
   const blocks = ((lesson.body || '').match(/^```\w+/gm) || []).length;
-  document.getElementById('word-count').textContent = `${words} words · ${blocks} blocks`;
+  el.textContent = `${words} words · ${blocks} blocks`;
 }
 
 function countWords(text) {
@@ -853,19 +837,16 @@ function validateLessonText(body) {
       catch { issues.push('Invalid LaTeX in math block'); break; }
     }
   }
-  const quizBlocks = body.match(/^```quiz\b[\s\S]*?^```/gm) || [];
-  for (const block of quizBlocks) {
-    if (!/question:/i.test(block)) issues.push('Quiz missing question');
-    if (!/answer:/i.test(block)) issues.push('Quiz missing answer');
-  }
   return issues;
 }
 
 function updateValidationBar() {
-  const li = state.selected.lessonIdx;
   const iconEl = document.getElementById('validation-icon');
   const textEl = document.getElementById('validation-text');
   const btn = document.getElementById('validation-btn');
+  if (!iconEl || !textEl || !btn) return;
+  
+  const li = state.selected.lessonIdx;
   if (li == null) {
     iconEl.textContent = '✓';
     iconEl.className = 'text-emerald';
@@ -883,7 +864,7 @@ function updateValidationBar() {
   } else {
     iconEl.textContent = '⚠';
     iconEl.className = 'text-amber';
-    textEl.textContent = issues.length + ' issue' + (issues.length > 1 ? 's' : '') + ' · ' + issues[0];
+    textEl.textContent = issues.length + ' issue' + (issues.length > 1 ? 's' : '');
     btn.className = 'flex items-center gap-1.5 hover:text-hi text-amber';
   }
 }
@@ -911,7 +892,7 @@ function showToast(message, type = 'info') {
   const host = document.getElementById('toast-host');
   const colors = { info: 'bg-ink-800 border-ink-600 text-hi', success: 'bg-emerald/20 border-emerald text-emerald-light', warning: 'bg-amber/20 border-amber text-amber-light', error: 'bg-rose/20 border-rose text-rose-light' };
   const el = document.createElement('div');
-  el.className = `px-3 py-2 rounded-lg border text-xs shadow-lg ${colors[type] || colors.info}`;
+  el.className = `px-4 py-2 rounded-lg border text-sm shadow-xl pointer-events-auto ${colors[type] || colors.info}`;
   el.textContent = message;
   host.appendChild(el);
   setTimeout(() => el.remove(), 3000);
@@ -936,7 +917,7 @@ function showConfirm(title, message, onConfirm, okLabel = 'Confirm', danger = tr
   document.getElementById('confirm-message').textContent = message;
   const ok = document.getElementById('confirm-ok');
   ok.textContent = okLabel;
-  ok.className = 'px-4 py-1.5 text-xs font-semibold rounded-lg ' + (danger ? 'bg-rose text-white hover:bg-rose-light' : 'bg-brand text-ink-900 hover:bg-brand-light');
+  ok.className = 'touch-btn px-6 text-sm font-semibold rounded-lg ' + (danger ? 'bg-rose text-white hover:bg-rose-light' : 'bg-brand text-ink-900 hover:bg-brand-light');
   ok.onclick = () => { closeModal('modal-confirm'); onConfirm(); };
   document.getElementById('confirm-cancel').onclick = () => closeModal('modal-confirm');
   openModal('modal-confirm');
@@ -1061,10 +1042,18 @@ function bindImportTabs() {
   document.querySelectorAll('.import-tab').forEach(tab => {
     tab.onclick = () => {
       importTab = tab.dataset.tab;
-      document.querySelectorAll('.import-tab').forEach(t => t.classList.toggle('active', t === tab));
+      document.querySelectorAll('.import-tab').forEach(t => {
+        t.classList.toggle('active', t === tab);
+        t.classList.toggle('text-brand-light', t === tab);
+        t.classList.toggle('border-b-2', t === tab);
+        t.classList.toggle('border-brand', t === tab);
+      });
       document.querySelectorAll('.import-panel').forEach(p => p.classList.toggle('hidden', p.dataset.panel !== importTab));
     };
   });
+  // trigger initial tab state
+  const initial = document.querySelector('.import-tab');
+  if (initial) initial.click();
 }
 
 function openImportModal() {
@@ -1196,7 +1185,7 @@ function executeImport() {
     state.subject = pendingImport.subject;
     state.description = pendingImport.description;
     state.topics = pendingImport.topics;
-    state.selected = { topicIdx: 0, lessonIdx: null };
+    state.selected = { topicIdx: 0, lessonIdx: null, subject: false };
   } else if (mode === 'merge') {
     for (const t of pendingImport.topics) {
       let existing = state.topics.find(et => et.name.toLowerCase() === t.name.toLowerCase());
@@ -1214,7 +1203,8 @@ function executeImport() {
     state.topics.push(...pendingImport.topics);
   }
 
-  document.getElementById('subject-input').value = state.subject;
+  if (document.getElementById('subject-input')) document.getElementById('subject-input').value = state.subject;
+  updateMobileSubjectLabel();
   pendingImport = null;
   renderAll();
   scheduleSave();
@@ -1263,10 +1253,10 @@ async function executePublish() {
   const filename = document.getElementById('publish-filename').value.trim();
   if (!owner || !repo || !filename) return showToast('Fill owner, repo, filename.', 'warning');
 
-  const issues = validateLessonText('') ;
   localStorage.setItem(LS_CREDS, JSON.stringify({ owner, repo }));
 
   const btn = document.getElementById('publish-btn');
+  const originalText = btn.textContent;
   btn.disabled = true; btn.textContent = 'Publishing…';
 
   try {
@@ -1285,7 +1275,7 @@ async function executePublish() {
   } catch (e) {
     showToast('Publish failed: ' + e.message, 'error');
   } finally {
-    btn.disabled = false; btn.textContent = 'Publish';
+    btn.disabled = false; btn.textContent = originalText;
   }
 }
 
