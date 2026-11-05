@@ -1091,13 +1091,26 @@ async function fetchFromGitHub() {
   const owner = document.getElementById('import-gh-owner').value.trim();
   const repo = document.getElementById('import-gh-repo').value.trim();
   const file = document.getElementById('import-gh-filename').value.trim();
+  
   if (!owner || !repo || !file) return showToast('Fill owner, repo, filename.', 'warning');
   localStorage.setItem(LS_CREDS, JSON.stringify({ owner, repo }));
-  const url = `https://raw.githubusercontent.com/${owner}/${repo}/main/notes-banks/${file}`;
+  
+  // Using the GitHub API instead of raw.githubusercontent.com
+  const url = `https://api.github.com/repos/${owner}/${repo}/contents/notes-banks/${file}`;
+  
   try {
     showToast('Fetching…');
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const res = await fetch(url, {
+      headers: { 'Accept': 'application/vnd.github.v3.raw' }
+    });
+    
+    if (!res.ok) {
+       if (res.status === 404) {
+           throw new Error('File not found. Check the repo name, branch, and folder.');
+       }
+       throw new Error('GitHub API error: HTTP ' + res.status);
+    }
+    
     const text = await res.text();
     processImportText(text);
   } catch (e) {
