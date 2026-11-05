@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#F6F8FB">
+  <meta name="description" content="EduNotes: a little wiser, every day. A local-first learning library and markdown lesson studio.">
+  <title>EduNotes | Your Learning Space</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;550;600;650;700;750;800&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css">
+  <link rel="stylesheet" href="css/edunotes.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"></script>
+
+  <!-- Note banks must load BEFORE edunotes.js -->
+  <script defer src="notes-banks/physics-notes.js"></script>
+  <!-- add more note banks here as you publish them -->
+
+  <script defer src="note-loader.js"></script>
+  <script defer src="js/edunotes.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main" id="skip-link">Skip to learning content</a>
+  <div id="app"></div>
+  <div id="overlay-root"></div>
+  <div class="toast-host" id="toast-host" role="status" aria-live="polite"></div>
+  <input type="file" id="import-file" accept=".md,.markdown,text/markdown,text/plain" hidden>
+  <noscript><p style="padding:40px;font-family:sans-serif">EduNotes needs JavaScript to open the Library and Studio. Please enable it in your browser.</p></noscript>
+</body>
+</html>
