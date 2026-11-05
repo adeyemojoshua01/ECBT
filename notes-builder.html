@@ -10,7 +10,7 @@
       theme: {
         extend: {
           colors: {
-            canvas: '#05070F', ink: { 900: '#0A0F1C', 800: '#111827', 700: '#1F293D', 600: '#33456A' },
+            canvas: '#05070F', ink: { 900: '#0A0F1C', 800: '#111827', 700: '#1F293D', 600: '#33456A', 500: '#4B5E82' },
             hi: '#EAF0FB', mid: '#B7C4DB', lo: '#8A9AB8',
             brand: { light: '#5EEAD4', DEFAULT: '#14B8A6', dark: '#0F766E' },
             amber: { light: '#FCD34D', DEFAULT: '#FBBF24', dark: '#F59E0B' },
@@ -18,106 +18,332 @@
             rose: { light: '#FB7185', DEFAULT: '#BE123C' },
             emerald: { light: '#34D399', DEFAULT: '#10B981' }
           },
-          fontFamily: { mono: ['JetBrains Mono', 'Fira Code', 'Monaco', 'Consolas', 'monospace'] }
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'Fira Code', 'Monaco', 'Consolas', 'monospace'],
+            serif: ['Source Serif 4', 'Georgia', 'serif']
+          }
         }
       }
     }
   </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.22/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <style>
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0A0F1C; }
+    ::-webkit-scrollbar-thumb { background: #1F293D; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #33456A; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    .line-gutter { user-select: none; -webkit-user-select: none; }
+    .editor-pane { font-feature-settings: "liga" 0; }
+    .preview-body { font-family: 'Source Serif 4', Georgia, serif; font-size: 16px; line-height: 1.8; color: var(--preview-text, #EAF0FB); }
+    .preview-body h1 { font: 700 26px/1.25 'Source Serif 4', serif; margin: 24px 0 14px; }
+    .preview-body h2 { font: 650 20px/1.35 'Inter', sans-serif; letter-spacing: -0.4px; margin: 26px 0 12px; }
+    .preview-body h3 { font: 600 16px/1.4 'Inter', sans-serif; margin: 20px 0 10px; }
+    .preview-body p { margin: 0 0 14px; }
+    .preview-body ul, .preview-body ol { padding-left: 22px; margin: 0 0 16px; }
+    .preview-body li { margin: 5px 0; }
+    .preview-body code { background: #111827; color: #5EEAD4; padding: 2px 5px; border-radius: 4px; font: 12px 'JetBrains Mono', monospace; }
+    .preview-body pre { background: #111827; border: 1px solid #1F293D; border-radius: 8px; padding: 14px; overflow-x: auto; font: 12px/1.6 'JetBrains Mono', monospace; }
+    .preview-body blockquote { border-left: 3px solid #14B8A6; background: rgba(20,184,166,.06); padding: 10px 16px; margin: 16px 0; font-style: italic; }
+    .preview-body table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+    .preview-body th, .preview-body td { border: 1px solid #1F293D; padding: 7px 10px; text-align: left; }
+    .preview-body th { background: #111827; }
+    .preview-body .callout { display: flex; gap: 12px; margin: 18px 0; padding: 14px 16px; border-radius: 8px; border-left: 3px solid #14B8A6; background: rgba(20,184,166,.06); }
+    .preview-body .callout.tip { border-left-color: #10B981; background: rgba(16,185,129,.06); }
+    .preview-body .callout.warning { border-left-color: #F59E0B; background: rgba(245,158,11,.08); }
+    .preview-body .callout.exam-focus { border-left-color: #BE123C; background: rgba(190,18,60,.08); }
+    .preview-body .callout-title { font: 600 13px 'Inter', sans-serif; margin-bottom: 4px; }
+    .preview-body .worked-steps { list-style: none; padding: 0; margin: 16px 0; counter-reset: step; }
+    .preview-body .worked-steps li { display: flex; gap: 12px; margin: 12px 0; }
+    .preview-body .worked-steps .step-num { width: 26px; height: 26px; flex-shrink: 0; border-radius: 50%; background: rgba(20,184,166,.15); color: #5EEAD4; display: flex; align-items: center; justify-content: center; font: 600 12px 'Inter', sans-serif; }
+    .preview-body .quiz-block { background: #111827; border: 1px solid #1F293D; border-radius: 10px; padding: 18px; margin: 20px 0; font-family: 'Inter', sans-serif; }
+    .preview-body .quiz-option { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #1F293D; border-radius: 6px; margin-top: 6px; font-size: 13px; }
+    .preview-body .quiz-option.correct { border-color: #10B981; background: rgba(16,185,129,.08); }
+    .preview-body .math-display { text-align: center; padding: 12px 0; margin: 14px 0; overflow-x: auto; }
+    .line-highlight { background: rgba(20,184,166,.08); }
+    .focus-glow:focus-visible { outline: 2px solid #14B8A6; outline-offset: 2px; }
+    [contenteditable]:empty:before { content: attr(data-placeholder); color: #8A9AB8; }
+  </style>
   <script>
     window.MathJax = {
       tex: { inlineMath: [['\\(', '\\)'], ['$', '$']], displayMath: [['\\[', '\\]'], ['$$', '$$']] },
       options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'] }
     };
   </script>
-  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-  <style>
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: #0A0F1C; }
-    ::-webkit-scrollbar-thumb { background: #1F293D; border-radius: 3px; }
-  </style>
 </head>
-<body class="h-full flex flex-col font-sans overflow-hidden antialiased selection:bg-brand/30">
+<body class="h-full flex flex-col font-sans overflow-hidden antialiased">
 
-  <header class="h-14 border-b border-ink-700 bg-ink-900 px-4 flex items-center justify-between shrink-0 z-20">
-    <div class="flex items-center space-x-3">
-      <a href="index.html" class="text-mid hover:text-hi text-sm">← CBT</a>
-      <span class="text-ink-600">|</span>
-      <span class="text-2xl">📓</span>
-      <span class="font-bold tracking-tight text-hi">eduCBT</span>
-      <span class="text-xs px-2 py-0.5 rounded bg-brand-dark/40 text-brand-light font-mono border border-brand/30">Notes Builder</span>
-      <input id="bank-subject-input" type="text" value="Untitled Subject" placeholder="Subject name..."
-             class="bg-transparent text-sm font-semibold text-hi focus:outline-none focus:border-b focus:border-brand px-2 py-0.5 rounded hover:bg-ink-800 transition w-56" />
+  <!-- HEADER -->
+  <header class="h-14 border-b border-ink-700 bg-ink-900 px-3 sm:px-4 flex items-center gap-2 shrink-0 z-20">
+    <a href="index.html" onclick="return confirmLeave()" class="text-mid hover:text-hi text-sm px-2 py-1 rounded hover:bg-ink-800 focus-glow" title="Back to CBT">← CBT</a>
+    <span class="text-ink-600 hidden sm:inline">|</span>
+    <span class="text-xl hidden sm:inline">📓</span>
+    <span class="font-bold tracking-tight text-hi hidden sm:inline">Notes</span>
+    <span class="text-[10px] px-1.5 py-0.5 rounded bg-brand-dark/40 text-brand-light font-mono border border-brand/30 hidden md:inline">Builder</span>
+    <input id="subject-input" type="text" placeholder="Subject name…"
+           class="bg-transparent text-sm font-semibold text-hi focus:outline-none focus:bg-ink-800 px-2 py-1 rounded border border-transparent focus:border-brand transition w-40 sm:w-64 min-w-0">
+    <div class="flex items-center gap-1 ml-2">
+      <button id="btn-undo" title="Undo (Ctrl+Z)" class="p-1.5 text-mid hover:text-hi rounded hover:bg-ink-800 focus-glow disabled:opacity-30 disabled:cursor-not-allowed">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a5 5 0 0 1 5 5v0a5 5 0 0 1-5 5H9m-6-10 4-4m-4 4 4 4"/></svg>
+      </button>
+      <button id="btn-redo" title="Redo (Ctrl+Shift+Z)" class="p-1.5 text-mid hover:text-hi rounded hover:bg-ink-800 focus-glow disabled:opacity-30 disabled:cursor-not-allowed">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 10H11a5 5 0 0 0-5 5v0a5 5 0 0 0 5 5h4m6-10-4-4m4 4-4 4"/></svg>
+      </button>
     </div>
-    <div class="flex items-center space-x-2">
-      <span id="save-indicator" class="text-xs text-emerald font-mono opacity-0 transition-opacity mr-2">💾 Saved</span>
-      <button onclick="openExportModal()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber text-ink-900 hover:bg-amber-light transition">Export</button>
-      <button onclick="openPublishModal()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-brand text-ink-900 hover:bg-brand-light transition">Publish</button>
-    </div>
+    <span id="save-indicator" class="text-[10px] font-mono ml-2 opacity-0 transition-opacity whitespace-nowrap"></span>
+    <div class="flex-1"></div>
+    <button id="btn-preview-toggle" title="Toggle preview (Ctrl+P)" class="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-ink-700 text-mid hover:text-hi hover:bg-ink-800 focus-glow">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+      <span class="hidden lg:inline">Preview</span>
+    </button>
+    <button onclick="openImportModal()" title="Import (Ctrl+Shift+I)" class="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-ink-700 text-mid hover:text-hi hover:bg-ink-800 focus-glow">
+      <span class="hidden sm:inline">Import</span><span class="sm:hidden">📥</span>
+    </button>
+    <button onclick="openExportModal()" title="Export (Ctrl+Shift+E)" class="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-ink-700 text-mid hover:text-hi hover:bg-ink-800 focus-glow">
+      <span class="hidden sm:inline">Export</span><span class="sm:hidden">📤</span>
+    </button>
+    <button onclick="openPublishModal()" title="Publish (Ctrl+Enter)" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber text-ink-900 hover:bg-amber-light focus-glow">
+      <span class="hidden sm:inline">Publish</span><span class="sm:hidden">🚀</span>
+    </button>
   </header>
 
-  <main class="flex-1 flex overflow-hidden">
-    <aside class="w-64 border-r border-ink-700 bg-ink-900 flex flex-col shrink-0">
-      <div class="p-3 border-b border-ink-700/60">
-        <button onclick="addTopic()" class="w-full py-2 px-3 text-xs font-semibold rounded-lg bg-ink-800 hover:bg-ink-700 text-brand-light border border-ink-700 hover:border-brand/40 transition">➕ New Topic</button>
+  <!-- MAIN -->
+  <main class="flex-1 flex overflow-hidden min-h-0">
+    <!-- LEFT: tree -->
+    <aside id="left-panel" class="w-64 border-r border-ink-700 bg-ink-900 flex flex-col shrink-0">
+      <div class="p-2 border-b border-ink-700/60 space-y-2">
+        <input id="tree-search" type="text" placeholder="Search topics, lessons…" class="w-full bg-ink-800 text-xs text-hi placeholder-lo rounded-lg px-2.5 py-1.5 border border-ink-700 focus:outline-none focus:border-brand">
+        <button onclick="addTopic()" class="w-full py-1.5 px-2 text-xs font-semibold rounded-lg bg-ink-800 hover:bg-ink-700 text-brand-light border border-ink-700 hover:border-brand/40">
+          + New topic
+        </button>
       </div>
-      <div id="topics-tree" class="flex-1 overflow-y-auto p-2 space-y-1"></div>
+      <div id="tree-scroll" class="flex-1 overflow-y-auto p-2" role="tree"></div>
+      <div class="p-2 border-t border-ink-700 bg-ink-900">
+        <button onclick="selectSubject()" id="tree-subject-btn" class="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-ink-800 text-mid">
+          ⚙ Bank settings
+        </button>
+      </div>
     </aside>
 
-    <section class="flex-1 flex flex-col bg-canvas overflow-hidden">
-      <div id="editor-pane" class="flex-1 overflow-y-auto p-6 md:p-8"></div>
+    <!-- CENTER: editor -->
+    <section class="flex-1 flex flex-col bg-canvas overflow-hidden min-w-0">
+      <div id="center-pane" class="flex-1 overflow-y-auto"></div>
     </section>
+
+    <!-- RIGHT: preview -->
+    <aside id="right-panel" class="w-96 border-l border-ink-700 bg-ink-900 flex flex-col shrink-0 hidden xl:flex">
+      <div class="h-10 px-3 flex items-center justify-between border-b border-ink-700/60 shrink-0">
+        <div class="flex items-center gap-2 text-[10px] font-semibold tracking-wider text-lo">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald"></span> LIVE PREVIEW
+        </div>
+        <div class="flex items-center gap-1">
+          <button data-device="mobile" class="device-btn p-1 rounded hover:bg-ink-800 text-lo hover:text-hi" title="Mobile">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>
+          </button>
+          <button data-device="tablet" class="device-btn p-1 rounded hover:bg-ink-800 text-lo hover:text-hi" title="Tablet">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M11 18h2"/></svg>
+          </button>
+          <button data-device="desktop" class="device-btn p-1 rounded hover:bg-ink-800 text-lo hover:text-hi" title="Desktop">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+          </button>
+        </div>
+      </div>
+      <div id="preview-scroll" class="flex-1 overflow-y-auto p-4">
+        <div id="preview-content" class="preview-body"></div>
+      </div>
+      <div class="px-3 py-2 border-t border-ink-700/60 text-[10px] text-lo flex items-center justify-between">
+        <span id="preview-badge">Preview only</span>
+        <span id="preview-width-label">390 px</span>
+      </div>
+    </aside>
   </main>
 
-  <!-- Modal: Export -->
-  <div id="modal-export" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 hidden">
-    <div class="bg-ink-900 border border-ink-700 rounded-2xl w-full max-w-2xl p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
-      <div class="flex items-center justify-between border-b border-ink-700 pb-3">
-        <h3 class="text-base font-bold text-hi">📤 Export note bank</h3>
-        <button onclick="closeModal('modal-export')" class="text-lo hover:text-hi">✕</button>
+  <!-- FOOTER -->
+  <footer class="h-9 px-3 border-t border-ink-700 bg-ink-900 flex items-center gap-3 text-[10px] text-lo shrink-0">
+    <span id="word-count">0 words · 0 blocks</span>
+    <span class="flex-1"></span>
+    <button id="validation-btn" class="flex items-center gap-1.5 hover:text-hi">
+      <span id="validation-icon">✓</span>
+      <span id="validation-text">All checks passed</span>
+    </button>
+    <span class="text-ink-600">|</span>
+    <span id="save-status" class="whitespace-nowrap">Not saved yet</span>
+  </footer>
+
+  <!-- MODAL: Import -->
+  <div id="modal-import" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-ink-900 border border-ink-700 rounded-2xl w-full max-w-xl p-5 shadow-2xl flex flex-col max-h-[90vh]">
+      <div class="flex items-center justify-between pb-3 border-b border-ink-700 shrink-0">
+        <h3 class="text-base font-bold text-hi">Import notes</h3>
+        <button onclick="closeModal('modal-import')" class="text-lo hover:text-hi p-1">✕</button>
       </div>
-      <div class="flex items-center gap-3">
-        <label class="text-xs text-mid whitespace-nowrap">Filename:</label>
-        <input id="export-filename" type="text" class="flex-1 bg-ink-800 text-xs font-mono text-hi border border-ink-700 rounded-lg px-3 py-1.5 focus:outline-none focus:border-brand">
+      <div class="flex gap-1 pt-3 shrink-0" role="tablist">
+        <button class="import-tab active px-3 py-1.5 text-xs font-semibold rounded-t-lg" data-tab="file">From file</button>
+        <button class="import-tab px-3 py-1.5 text-xs font-semibold rounded-t-lg" data-tab="github">From GitHub</button>
+        <button class="import-tab px-3 py-1.5 text-xs font-semibold rounded-t-lg" data-tab="paste">Paste</button>
       </div>
-      <pre id="export-code-preview" class="flex-1 bg-canvas border border-ink-700 rounded-xl p-3 font-mono text-[11px] text-mid overflow-auto whitespace-pre-wrap max-h-[50vh]"></pre>
-      <div class="flex justify-end gap-2 pt-3 border-t border-ink-700">
-        <button onclick="copyExportCode()" class="px-4 py-2 text-xs font-semibold rounded-lg bg-ink-800 hover:bg-ink-700 border border-ink-700 text-hi">Copy Code</button>
-        <button onclick="downloadExportFile()" class="px-4 py-2 text-xs font-semibold rounded-lg bg-amber text-ink-900 hover:bg-amber-light">Download</button>
+      <div class="flex-1 overflow-y-auto pt-4 space-y-3">
+        <div class="import-panel" data-panel="file">
+          <div id="import-drop" onclick="document.getElementById('import-file-input').click()" class="border-2 border-dashed border-ink-600 hover:border-brand bg-ink-800/40 rounded-xl p-8 text-center cursor-pointer transition">
+            <div class="text-3xl mb-2">📁</div>
+            <p class="text-sm font-medium text-hi">Drop a .js bank file here</p>
+            <p class="text-xs text-lo mt-1">or click to browse — accepts .js, .md, .txt</p>
+            <input type="file" id="import-file-input" accept=".js,.md,.txt" class="hidden" onchange="handleImportFile(event)">
+          </div>
+        </div>
+        <div class="import-panel hidden" data-panel="github">
+          <div class="space-y-2">
+            <label class="block text-xs text-mid">Owner
+              <input id="import-gh-owner" type="text" class="w-full bg-ink-800 text-xs text-hi border border-ink-700 rounded-lg px-2.5 py-1.5 mt-1 focus:outline-none focus:border-brand">
+            </label>
+            <label class="block text-xs text-mid">Repository
+              <input id="import-gh-repo" type="text" class="w-full bg-ink-800 text-xs text-hi border border-ink-700 rounded-lg px-2.5 py-1.5 mt-1 focus:outline-none focus:border-brand">
+            </label>
+            <label class="block text-xs text-mid">Filename (under notes-banks/)
+              <input id="import-gh-filename" type="text" class="w-full bg-ink-800 font-mono text-xs text-hi border border-ink-700 rounded-lg px-2.5 py-1.5 mt-1 focus:outline-none focus:border-brand" placeholder="physics-notes.js">
+            </label>
+            <button onclick="fetchFromGitHub()" class="mt-2 px-3 py-1.5 text-xs font-semibold rounded-lg bg-brand text-ink-900 hover:bg-brand-light">Fetch</button>
+          </div>
+        </div>
+        <div class="import-panel hidden" data-panel="paste">
+          <textarea id="import-paste" rows="10" class="w-full bg-ink-800 font-mono text-xs text-hi border border-ink-700 rounded-lg px-2.5 py-2 focus:outline-none focus:border-brand" placeholder="Paste bank code here: window.CBT_NOTE_BANKS.push(`...`) or bare bank text"></textarea>
+          <button onclick="parsePasted()" class="mt-2 px-3 py-1.5 text-xs font-semibold rounded-lg bg-brand text-ink-900 hover:bg-brand-light">Parse</button>
+        </div>
+
+        <div id="import-summary" class="bg-ink-800/60 border border-ink-700 rounded-xl p-3 text-xs hidden">
+          <div id="import-summary-head" class="font-semibold text-brand-light"></div>
+          <div id="import-warnings" class="text-amber text-[11px] space-y-1 mt-1"></div>
+        </div>
+
+        <div class="flex items-center gap-4 text-xs pt-2">
+          <span class="text-mid">Merge mode:</span>
+          <label class="flex items-center gap-1.5 cursor-pointer text-hi"><input type="radio" name="import-mode" value="replace" class="accent-brand"><span>Replace</span></label>
+          <label class="flex items-center gap-1.5 cursor-pointer text-hi"><input type="radio" name="import-mode" value="merge" class="accent-brand" checked><span>Merge</span></label>
+          <label class="flex items-center gap-1.5 cursor-pointer text-hi"><input type="radio" name="import-mode" value="append" class="accent-brand"><span>Append</span></label>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-3 border-t border-ink-700 shrink-0">
+        <button onclick="closeModal('modal-import')" class="px-3 py-1.5 text-xs text-mid hover:text-hi">Cancel</button>
+        <button id="import-confirm" onclick="executeImport()" disabled class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-brand text-ink-900 disabled:opacity-40 hover:bg-brand-light">Import →</button>
       </div>
     </div>
   </div>
 
-  <!-- Modal: Publish -->
-  <div id="modal-publish" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 hidden">
-    <div class="bg-ink-900 border border-ink-700 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
-      <div class="flex items-center justify-between border-b border-ink-700 pb-3">
-        <h3 class="text-base font-bold text-hi">🚀 Publish to GitHub</h3>
-        <button onclick="closeModal('modal-publish')" class="text-lo hover:text-hi">✕</button>
+  <!-- MODAL: Export -->
+  <div id="modal-export" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-ink-900 border border-ink-700 rounded-2xl w-full max-w-2xl p-5 shadow-2xl flex flex-col max-h-[90vh]">
+      <div class="flex items-center justify-between pb-3 border-b border-ink-700 shrink-0">
+        <h3 class="text-base font-bold text-hi">Export notes bank</h3>
+        <button onclick="closeModal('modal-export')" class="text-lo hover:text-hi p-1">✕</button>
       </div>
-      <div class="space-y-3">
-        <div>
-          <label class="text-xs text-mid block mb-1">GitHub Username / Org</label>
-          <input id="gh-owner" type="text" class="w-full bg-ink-800 text-xs text-hi border border-ink-700 rounded-lg px-3 py-2 focus:outline-none focus:border-brand">
+      <div class="pt-3 space-y-3 shrink-0">
+        <div class="flex items-center gap-3">
+          <label class="text-xs text-mid whitespace-nowrap">Filename:</label>
+          <input id="export-filename" type="text" class="flex-1 bg-ink-800 text-xs font-mono text-hi border border-ink-700 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-brand">
         </div>
-        <div>
-          <label class="text-xs text-mid block mb-1">Repository</label>
-          <input id="gh-repo" type="text" class="w-full bg-ink-800 text-xs text-hi border border-ink-700 rounded-lg px-3 py-2 focus:outline-none focus:border-brand">
-        </div>
-        <div>
-          <label class="text-xs text-mid block mb-1">File name (saved under notes-banks/)</label>
-          <input id="publish-filename" type="text" class="w-full bg-ink-800 font-mono text-xs text-hi border border-ink-700 rounded-lg px-3 py-2 focus:outline-none focus:border-brand">
-        </div>
-        <div class="text-[11px] text-lo bg-ink-800/60 border border-ink-700 rounded-lg p-2">
-          The GitHub token is read server-side from <span class="font-mono text-brand-light">process.env.GITHUB_TOKEN</span> in Vercel. No token is sent from this page.
+        <div class="flex items-center gap-4 text-xs">
+          <span class="text-mid">Format:</span>
+          <label class="flex items-center gap-1.5 cursor-pointer text-hi"><input type="radio" name="export-format" value="js" class="accent-brand" checked onchange="updateExportPreview()"><span>.js bank file</span></label>
+          <label class="flex items-center gap-1.5 cursor-pointer text-hi"><input type="radio" name="export-format" value="zip" class="accent-brand" onchange="updateExportPreview()"><span>.md files (zip)</span></label>
         </div>
       </div>
-      <div class="flex justify-end gap-2 pt-3 border-t border-ink-700">
-        <button onclick="closeModal('modal-publish')" class="px-4 py-2 text-xs text-mid hover:text-hi">Cancel</button>
-        <button id="btn-do-publish" onclick="executePublish()" class="px-4 py-2 text-xs font-semibold rounded-lg bg-brand text-ink-900 hover:bg-brand-light">Publish</button>
+      <div class="flex-1 flex flex-col min-h-0 mt-3">
+        <div class="flex justify-between items-center text-[10px] text-lo mb-1">
+          <span>Preview:</span>
+          <span id="export-stats" class="font-mono text-brand-light">0 KB</span>
+        </div>
+        <pre id="export-preview" class="flex-1 bg-canvas border border-ink-700 rounded-xl p-3 font-mono text-[11px] text-mid overflow-auto whitespace-pre-wrap select-all min-h-[200px]"></pre>
+      </div>
+      <div class="flex justify-end gap-2 pt-3 border-t border-ink-700 shrink-0">
+        <button onclick="copyExport()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-ink-800 hover:bg-ink-700 border border-ink-700 text-hi">Copy code</button>
+        <button onclick="downloadExport()" class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-amber text-ink-900 hover:bg-amber-light">Download</button>
       </div>
     </div>
   </div>
 
-  <script src="js/notes-builder.js"></script>
+  <!-- MODAL: Publish -->
+  <div id="modal-publish" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-ink-900 border border-ink-700 rounded-2xl w-full max-w-md p-5 shadow-2xl flex flex-col max-h-[90vh]">
+      <div class="flex items-center justify-between pb-3 border-b border-ink-700 shrink-0">
+        <h3 class="text-base font-bold text-hi">Publish to GitHub</h3>
+        <button onclick="closeModal('modal-publish')" class="text-lo hover:text-hi p-1">✕</button>
+      </div>
+      <div class="flex-1 overflow-y-auto pt-3 space-y-3">
+        <label class="block text-xs text-mid">GitHub Username / Org
+          <input id="gh-owner" type="text" class="w-full bg-ink-800 text-xs text-hi border border-ink-700 rounded-lg px-2.5 py-1.5 mt-1 focus:outline-none focus:border-brand">
+        </label>
+        <label class="block text-xs text-mid">Repository
+          <input id="gh-repo" type="text" class="w-full bg-ink-800 text-xs text-hi border border-ink-700 rounded-lg px-2.5 py-1.5 mt-1 focus:outline-none focus:border-brand">
+        </label>
+        <label class="block text-xs text-mid">File name (under notes-banks/)
+          <input id="publish-filename" type="text" class="w-full bg-ink-800 font-mono text-xs text-hi border border-ink-700 rounded-lg px-2.5 py-1.5 mt-1 focus:outline-none focus:border-brand">
+        </label>
+        <div id="publish-preflight" class="bg-ink-800/60 border border-ink-700 rounded-lg p-3 text-[11px] space-y-1 text-lo"></div>
+        <div id="publish-script-tag" class="bg-canvas border border-brand/30 rounded-lg p-2.5 text-[10px] font-mono text-brand-light hidden">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-hi font-sans font-semibold">Add to notes.html:</span>
+            <button onclick="copyScriptTag()" class="text-[10px] px-2 py-0.5 rounded bg-brand text-ink-900 font-sans font-semibold hover:bg-brand-light">Copy</button>
+          </div>
+          <code id="script-tag-text" class="block break-all"></code>
+        </div>
+        <div class="text-[10px] text-lo">
+          The GitHub token is read server-side from <span class="font-mono text-brand-light">process.env.GITHUB_TOKEN</span> in Vercel.
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-3 border-t border-ink-700 shrink-0">
+        <button onclick="closeModal('modal-publish')" class="px-3 py-1.5 text-xs text-mid hover:text-hi">Cancel</button>
+        <button id="publish-btn" onclick="executePublish()" class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-brand text-ink-900 hover:bg-brand-light">Publish</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Generic confirm -->
+  <div id="modal-confirm" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-ink-900 border border-ink-700 rounded-2xl w-full max-w-md p-5 shadow-2xl">
+      <h3 id="confirm-title" class="text-base font-bold text-hi mb-2">Confirm</h3>
+      <p id="confirm-message" class="text-xs text-mid mb-4"></p>
+      <div class="flex justify-end gap-2">
+        <button id="confirm-cancel" class="px-3 py-1.5 text-xs text-mid hover:text-hi">Cancel</button>
+        <button id="confirm-ok" class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-rose text-white hover:bg-rose-light">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Shortcut help -->
+  <div id="modal-shortcuts" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-ink-900 border border-ink-700 rounded-2xl w-full max-w-md p-5 shadow-2xl">
+      <div class="flex items-center justify-between pb-3 border-b border-ink-700">
+        <h3 class="text-base font-bold text-hi">Keyboard shortcuts</h3>
+        <button onclick="closeModal('modal-shortcuts')" class="text-lo hover:text-hi p-1">✕</button>
+      </div>
+      <div class="pt-3 space-y-1 text-xs text-mid">
+        <div class="grid grid-cols-2 gap-x-4 gap-y-1.5">
+          <div>Save</div><div class="font-mono text-hi">Ctrl/Cmd + S</div>
+          <div>Publish</div><div class="font-mono text-hi">Ctrl/Cmd + Enter</div>
+          <div>Undo</div><div class="font-mono text-hi">Ctrl/Cmd + Z</div>
+          <div>Redo</div><div class="font-mono text-hi">Ctrl/Cmd + Shift + Z</div>
+          <div>Bold / Italic</div><div class="font-mono text-hi">Ctrl/Cmd + B / I</div>
+          <div>Toggle preview</div><div class="font-mono text-hi">Ctrl/Cmd + P</div>
+          <div>Import</div><div class="font-mono text-hi">Ctrl/Cmd + Shift + I</div>
+          <div>Export</div><div class="font-mono text-hi">Ctrl/Cmd + Shift + E</div>
+          <div>Close / cancel</div><div class="font-mono text-hi">Esc</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast host -->
+  <div id="toast-host" class="fixed bottom-12 right-4 z-50 flex flex-col gap-2 items-end"></div>
+
+  <script defer src="js/notes-builder.js"></script>
 </body>
 </html>
