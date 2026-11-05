@@ -1,46 +1,51 @@
 // ============================================================
-// NOTE LOADER (Regex-Based for robust parsing)
+// NOTE LOADER (Bulletproof version)
 // ============================================================
 
 (function () {
     'use strict';
 
-    const MAX_WAIT_ATTEMPTS = 100;
-    let attempts = 0;
-
     function parseBank(raw) {
         if (typeof raw !== 'string') return null;
         
-        // Split the bank into blocks based on the structure
-        let subject = null;
+        // 1. Clean up the escaped backticks from the builder
+        let text = raw.replace(/\\`\\`\\`/g, '```');
+
+        // 2. Extract Subject and Description using Regex on the whole text
+        let subject = 'Untitled';
+        const subM = text.match(/Subject:\s*(.*)/i);
+        if (subM) subject = subM[1].trim();
+
         let description = '';
+        const descM = text.match(/Description:\s*(.*)/i);
+        if (descM) description = descM[1].trim();
+
+        // 3. Split into Topics
         const topics = [];
-
-        // Extract Subject
-        const subjectMatch = raw.match(/Subject:\s*(.*)/i);
-        if (subjectMatch) subject = subjectMatch[1].trim();
-
-        // Extract Description
-        const descMatch = raw.match(/Description:\s*(.*)/i);
-        if (descMatch) description = descMatch[1].trim();
-
-        // Split the text into chunks by "Topic:"
-        const topicChunks = raw.split(/\nTopic:\s*/i).slice(1);
+        const parts = text.split(/Topic:\s*/i);
         
-        for (const chunk of topicChunks) {
-            // The topic name is the first line of the chunk
-            const lines = chunk.split('\n');
-            const topicName = lines[0].trim();
-            const topicContent = lines.slice(1).join('\n');
+        for (let i = 1; i < parts.length; i++) {
+            const chunk = parts[i];
+            const firstLineBreak = chunk.indexOf('\n');
+            if (firstLineBreak === -1) continue;
             
+            const topicName = chunk.substring(0, firstLineBreak).trim();
+            const topicContent = chunk.substring(firstLineBreak).trim();
+            
+            // 4. Split into Lessons
             const lessons = [];
-            // Split by "Lesson:" (with or without a heading)
-            const lessonChunks = topicContent.split(/\nLesson:\s*/i).slice(1);
+            const lessonParts = topicContent.split(/Lesson:\s*/i);
             
-            for (const lChunk of lessonChunks) {
-                const lLines = lChunk.split('\n');
-                const lessonTitle = lLines[0].trim();
-                const lessonBody = lLines.slice(1).join('\n').trim();
+            for (let j = 1; j < lessonParts.length; j++) {
+                const lChunk = lessonParts[j];
+                const lFirstLineBreak = lChunk.indexOf('\n');
+                if (lFirstLineBreak === -1) continue;
+                
+                const lessonTitle = lChunk.substring(0, lFirstLineBreak).trim();
+                let lessonBody = lChunk.substring(lFirstLineBreak).trim();
+                
+                // Quick fix for the missing newline bug in your test lesson
+                lessonBody = lessonBody.replace(/\*\*(.*?)\*\*\*(.*?)\*/g, '**$1**\n\n*$2*');
                 
                 if (lessonTitle && lessonBody) {
                     lessons.push({ title: lessonTitle, body: lessonBody });
@@ -52,47 +57,55 @@
             }
         }
 
-        if (!subject || topics.length === 0) return null;
+        if (topics.length === 0) return null;
         return { subject, description, topics };
     }
 
+    // Wait for EduNotes to fully boot up
+    let attempts = 0;
     function tryImport() {
         attempts++;
-        if (attempts > MAX_WAIT_ATTEMPTS) {
-            console.warn('note-loader: EduNotes did not become ready in time.');
-            return;
-        }
-        const ready = window.EduNotes && typeof window.EduNotes.mergeBanks === 'function';
-        const banks = window.CBT_NOTE_BANKS;
-        if (!ready || !Array.isArray(banks)) {
+        if (attempts > 100) return; // Stop after 10 seconds
+
+        // We need the state and the mergeBanks function
+        if (!window.EduNotes || !window.EduNotes.state || typeof window.EduNotes.mergeBanks !== 'function') {
             setTimeout(tryImport, 100);
             return;
         }
-        if (!banks.length) return;
 
-        const parsed = [];
-        for (const raw of banks) {
-            const bank = parseBank(raw);
-            if (bank) parsed.push(bank);
-        }
-        
-        if (!parsed.length) {
-            console.warn('note-loader: no valid note banks parsed.');
+        const banks = window.CBT_NOTE_BANKS || [];
+        if (banks.length === 0) {
+            console.warn('note-loader: No note banks found in window.CBT_NOTE_BANKS');
             return;
         }
-        
-        try {
-            const n = window.EduNotes.mergeBanks(parsed);
-            console.log('note-loader: merged ' + n + ' lesson(s) from ' + parsed.length + ' bank(s).');
-            if (n > 0) window.EduNotes.rerender();
-        } catch (e) {
-            console.error('note-loader: merge failed', e);
+
+        const parsedBanks = [];
+        banks.forEach(raw => {
+            const parsed = parseBank(raw);
+            if (parsed) parsedBanks.push(parsed);
+        });
+
+        if (parsedBanks.length > 0) {
+            // Force clear the state before merging, just in case there's leftover localStorage junk
+            window.EduNotes.state.courses = [];
+            window.EduNotes.state.progress = {};
+            
+            const count = window.EduNotes.mergeBanks(parsedBanks);
+            console.log('note-loader: Successfully merged ' + count + ' lessons from ' + parsedBanks.length + ' banks.');
+            
+            // Force a re-render so they show up immediately
+            window.EduNotes.rerender();
         }
     }
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', tryImport, { once: true });
-    } else {
-        tryImport();
+    // Start trying immediately
+    tryInit();
+
+    function tryInit() {
+        if (window.EduNotes) {
+            tryImport();
+        } else {
+            setTimeout(tryInit, 100);
+        }
     }
 })();
