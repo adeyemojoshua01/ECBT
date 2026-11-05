@@ -2,7 +2,7 @@
 <html lang="en" class="h-full bg-[#05070F] text-[#EAF0FB]">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>eduCBT Notes Builder</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
@@ -41,10 +41,11 @@
     ::-webkit-scrollbar-thumb { background: #1F293D; border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: #33456A; }
     * { box-sizing: border-box; }
-    body { margin: 0; }
-    .line-gutter { user-select: none; -webkit-user-select: none; }
+    body { margin: 0; -webkit-tap-highlight-color: transparent; }
     .editor-pane { font-feature-settings: "liga" 0; }
-    .preview-body { font-family: 'Source Serif 4', Georgia, serif; font-size: 16px; line-height: 1.8; color: var(--preview-text, #EAF0FB); }
+    
+    /* Preview styles */
+    .preview-body { font-family: 'Source Serif 4', Georgia, serif; font-size: 16px; line-height: 1.8; color: #EAF0FB; }
     .preview-body h1 { font: 700 26px/1.25 'Source Serif 4', serif; margin: 24px 0 14px; }
     .preview-body h2 { font: 650 20px/1.35 'Inter', sans-serif; letter-spacing: -0.4px; margin: 26px 0 12px; }
     .preview-body h3 { font: 600 16px/1.4 'Inter', sans-serif; margin: 20px 0 10px; }
@@ -69,78 +70,118 @@
     .preview-body .quiz-option { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #1F293D; border-radius: 6px; margin-top: 6px; font-size: 13px; }
     .preview-body .quiz-option.correct { border-color: #10B981; background: rgba(16,185,129,.08); }
     .preview-body .math-display { text-align: center; padding: 12px 0; margin: 14px 0; overflow-x: auto; }
-    .line-highlight { background: rgba(20,184,166,.08); }
-    .focus-glow:focus-visible { outline: 2px solid #14B8A6; outline-offset: 2px; }
-    [contenteditable]:empty:before { content: attr(data-placeholder); color: #8A9AB8; }
+
+    /* Mobile specific */
+    @media (max-width: 899px) {
+      .touch-btn { min-height: 44px; display: flex; align-items: center; justify-content: center; }
+      .header-btn-text { display: none; }
+      .header-btn-icon { display: block; }
+    }
+    @media (min-width: 900px) {
+      .header-btn-text { display: inline; }
+      .header-btn-icon { display: none; }
+    }
   </style>
-  <script>
-    window.MathJax = {
-      tex: { inlineMath: [['\\(', '\\)'], ['$', '$']], displayMath: [['\\[', '\\]'], ['$$', '$$']] },
-      options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'] }
-    };
-  </script>
 </head>
 <body class="h-full flex flex-col font-sans overflow-hidden antialiased">
 
   <!-- HEADER -->
-  <header class="h-14 border-b border-ink-700 bg-ink-900 px-3 sm:px-4 flex items-center gap-2 shrink-0 z-20">
-    <a href="index.html" onclick="return confirmLeave()" class="text-mid hover:text-hi text-sm px-2 py-1 rounded hover:bg-ink-800 focus-glow" title="Back to CBT">← CBT</a>
-    <span class="text-ink-600 hidden sm:inline">|</span>
-    <span class="text-xl hidden sm:inline">📓</span>
-    <span class="font-bold tracking-tight text-hi hidden sm:inline">Notes</span>
-    <span class="text-[10px] px-1.5 py-0.5 rounded bg-brand-dark/40 text-brand-light font-mono border border-brand/30 hidden md:inline">Builder</span>
-    <input id="subject-input" type="text" placeholder="Subject name…"
-           class="bg-transparent text-sm font-semibold text-hi focus:outline-none focus:bg-ink-800 px-2 py-1 rounded border border-transparent focus:border-brand transition w-40 sm:w-64 min-w-0">
-    <div class="flex items-center gap-1 ml-2">
-      <button id="btn-undo" title="Undo (Ctrl+Z)" class="p-1.5 text-mid hover:text-hi rounded hover:bg-ink-800 focus-glow disabled:opacity-30 disabled:cursor-not-allowed">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a5 5 0 0 1 5 5v0a5 5 0 0 1-5 5H9m-6-10 4-4m-4 4 4 4"/></svg>
+  <header class="border-b border-ink-700 bg-ink-900 flex flex-col sm:flex-row sm:items-center shrink-0 z-20 shadow-md">
+    <!-- Top Row (always) -->
+    <div class="h-14 flex items-center px-3 gap-2 shrink-0">
+      <a href="index.html" class="touch-btn px-2 text-mid hover:text-hi sm:hidden" title="Back">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+      </a>
+      <a href="index.html" class="hidden sm:flex text-mid hover:text-hi text-sm px-2 py-1 rounded hover:bg-ink-800" title="Back">← CBT</a>
+      
+      <span class="text-xl hidden sm:inline">📓</span>
+      <span class="font-bold tracking-tight text-hi hidden sm:inline">Notes</span>
+      
+      <!-- Desktop Subject Input -->
+      <input id="subject-input" type="text" placeholder="Subject name…"
+             class="hidden sm:block bg-transparent text-sm font-semibold text-hi focus:outline-none focus:bg-ink-800 px-2 py-1 rounded border border-transparent focus:border-brand transition w-48">
+             
+      <!-- Mobile Subject Display (tap goes to settings) -->
+      <button id="mobile-subject-btn" onclick="selectSubject()" class="sm:hidden flex-1 text-left px-2 py-1 truncate text-sm font-semibold text-hi">
+        Untitled Subject
       </button>
-      <button id="btn-redo" title="Redo (Ctrl+Shift+Z)" class="p-1.5 text-mid hover:text-hi rounded hover:bg-ink-800 focus-glow disabled:opacity-30 disabled:cursor-not-allowed">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 10H11a5 5 0 0 0-5 5v0a5 5 0 0 0 5 5h4m6-10-4-4m4 4-4 4"/></svg>
+
+      <div class="flex items-center gap-1">
+        <button id="btn-undo" class="touch-btn w-10 text-mid hover:text-hi rounded hover:bg-ink-800 disabled:opacity-30">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a5 5 0 0 1 5 5v0a5 5 0 0 1-5 5H9m-6-10 4-4m-4 4 4 4"/></svg>
+        </button>
+        <button id="btn-redo" class="touch-btn w-10 text-mid hover:text-hi rounded hover:bg-ink-800 disabled:opacity-30">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 10H11a5 5 0 0 0-5 5v0a5 5 0 0 0 5 5h4m6-10-4-4m4 4-4 4"/></svg>
+        </button>
+      </div>
+      
+      <div class="flex-1"></div>
+      <span id="save-indicator" class="text-[10px] font-mono opacity-0 transition-opacity whitespace-nowrap hidden sm:block"></span>
+    </div>
+
+    <!-- Bottom Row (Mobile only) -->
+    <div class="h-12 flex items-center gap-1 px-2 border-t border-ink-800 sm:hidden shrink-0">
+      <button onclick="toggleMobilePreview()" class="touch-btn flex-1 text-xs font-medium rounded-lg border border-ink-700 text-mid hover:text-hi hover:bg-ink-800">
+        <svg class="w-4 h-4 mr-1 inline" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+        Preview
+      </button>
+      <button onclick="openImportModal()" class="touch-btn flex-1 text-xs font-medium rounded-lg border border-ink-700 text-mid hover:text-hi hover:bg-ink-800">
+        Import
+      </button>
+      <button onclick="openExportModal()" class="touch-btn flex-1 text-xs font-medium rounded-lg border border-ink-700 text-mid hover:text-hi hover:bg-ink-800">
+        Export
+      </button>
+      <button onclick="openPublishModal()" class="touch-btn flex-1 text-xs font-bold rounded-lg bg-amber text-ink-900 hover:bg-amber-light">
+        Publish
       </button>
     </div>
-    <span id="save-indicator" class="text-[10px] font-mono ml-2 opacity-0 transition-opacity whitespace-nowrap"></span>
-    <div class="flex-1"></div>
-    <button id="btn-preview-toggle" title="Toggle preview (Ctrl+P)" class="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-ink-700 text-mid hover:text-hi hover:bg-ink-800 focus-glow">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-      <span class="hidden lg:inline">Preview</span>
-    </button>
-    <button onclick="openImportModal()" title="Import (Ctrl+Shift+I)" class="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-ink-700 text-mid hover:text-hi hover:bg-ink-800 focus-glow">
-      <span class="hidden sm:inline">Import</span><span class="sm:hidden">📥</span>
-    </button>
-    <button onclick="openExportModal()" title="Export (Ctrl+Shift+E)" class="px-2.5 py-1.5 text-xs font-medium rounded-lg border border-ink-700 text-mid hover:text-hi hover:bg-ink-800 focus-glow">
-      <span class="hidden sm:inline">Export</span><span class="sm:hidden">📤</span>
-    </button>
-    <button onclick="openPublishModal()" title="Publish (Ctrl+Enter)" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber text-ink-900 hover:bg-amber-light focus-glow">
-      <span class="hidden sm:inline">Publish</span><span class="sm:hidden">🚀</span>
-    </button>
+
+    <!-- Desktop Action Buttons -->
+    <div class="hidden sm:flex items-center gap-2 pr-3">
+      <button onclick="toggleMobilePreview()" class="touch-btn px-2.5 text-xs font-medium rounded-lg border border-ink-700 text-mid hover:text-hi hover:bg-ink-800">
+        Preview
+      </button>
+      <button onclick="openImportModal()" class="touch-btn px-2.5 text-xs font-medium rounded-lg border border-ink-700 text-mid hover:text-hi hover:bg-ink-800">
+        Import
+      </button>
+      <button onclick="openExportModal()" class="touch-btn px-2.5 text-xs font-medium rounded-lg border border-ink-700 text-mid hover:text-hi hover:bg-ink-800">
+        Export
+      </button>
+      <button onclick="openPublishModal()" class="touch-btn px-3 text-xs font-semibold rounded-lg bg-amber text-ink-900 hover:bg-amber-light">
+        Publish
+      </button>
+    </div>
   </header>
 
   <!-- MAIN -->
-  <main class="flex-1 flex overflow-hidden min-h-0">
-    <!-- LEFT: tree -->
-    <aside id="left-panel" class="w-64 border-r border-ink-700 bg-ink-900 flex flex-col shrink-0">
-      <div class="p-2 border-b border-ink-700/60 space-y-2">
-        <input id="tree-search" type="text" placeholder="Search topics, lessons…" class="w-full bg-ink-800 text-xs text-hi placeholder-lo rounded-lg px-2.5 py-1.5 border border-ink-700 focus:outline-none focus:border-brand">
-        <button onclick="addTopic()" class="w-full py-1.5 px-2 text-xs font-semibold rounded-lg bg-ink-800 hover:bg-ink-700 text-brand-light border border-ink-700 hover:border-brand/40">
+  <main class="flex-1 flex overflow-hidden min-h-0 relative">
+    
+    <!-- LEFT: Tree (Mobile: absolute overlay, Desktop: static) -->
+    <aside id="left-panel" class="absolute sm:relative inset-y-0 left-0 z-30 w-full sm:w-64 border-r border-ink-700 bg-ink-900 flex flex-col shrink-0 transform -translate-x-full sm:translate-x-0 transition-transform duration-300 ease-in-out">
+      <div class="p-3 border-b border-ink-700/60 space-y-2">
+        <input id="tree-search" type="text" placeholder="Search topics, lessons…" class="w-full bg-ink-800 text-sm text-hi placeholder-lo rounded-lg px-3 py-2 border border-ink-700 focus:outline-none focus:border-brand min-h-[44px]">
+        <button onclick="addTopic()" class="w-full min-h-[44px] px-3 text-sm font-semibold rounded-lg bg-ink-800 hover:bg-ink-700 text-brand-light border border-ink-700 hover:border-brand/40">
           + New topic
         </button>
       </div>
       <div id="tree-scroll" class="flex-1 overflow-y-auto p-2" role="tree"></div>
-      <div class="p-2 border-t border-ink-700 bg-ink-900">
-        <button onclick="selectSubject()" id="tree-subject-btn" class="w-full text-left px-2 py-1.5 text-xs rounded hover:bg-ink-800 text-mid">
+      <div class="p-3 border-t border-ink-700 bg-ink-900 shrink-0">
+        <button onclick="selectSubject()" class="w-full text-left px-3 py-2 min-h-[44px] text-sm rounded-lg hover:bg-ink-800 text-mid flex items-center gap-2">
           ⚙ Bank settings
         </button>
       </div>
     </aside>
 
+    <!-- Mobile Backdrop -->
+    <div id="mobile-backdrop" class="fixed inset-0 bg-black/60 z-20 hidden sm:hidden" onclick="toggleMobileTree()"></div>
+
     <!-- CENTER: editor -->
-    <section class="flex-1 flex flex-col bg-canvas overflow-hidden min-w-0">
+    <section class="flex-1 flex flex-col bg-canvas overflow-hidden min-w-0 relative">
       <div id="center-pane" class="flex-1 overflow-y-auto"></div>
     </section>
 
-    <!-- RIGHT: preview -->
-    <aside id="right-panel" class="w-96 border-l border-ink-700 bg-ink-900 flex flex-col shrink-0 hidden xl:flex">
+    <!-- RIGHT: preview (Desktop only) -->
+    <aside id="right-panel" class="w-96 border-l border-ink-700 bg-ink-900 flex-col shrink-0 hidden xl:flex">
       <div class="h-10 px-3 flex items-center justify-between border-b border-ink-700/60 shrink-0">
         <div class="flex items-center gap-2 text-[10px] font-semibold tracking-wider text-lo">
           <span class="w-1.5 h-1.5 rounded-full bg-emerald"></span> LIVE PREVIEW
@@ -157,7 +198,7 @@
           </button>
         </div>
       </div>
-      <div id="preview-scroll" class="flex-1 overflow-y-auto p-4">
+      <div class="flex-1 overflow-y-auto p-4">
         <div id="preview-content" class="preview-body"></div>
       </div>
       <div class="px-3 py-2 border-t border-ink-700/60 text-[10px] text-lo flex items-center justify-between">
@@ -168,55 +209,64 @@
   </main>
 
   <!-- FOOTER -->
-  <footer class="h-9 px-3 border-t border-ink-700 bg-ink-900 flex items-center gap-3 text-[10px] text-lo shrink-0">
+  <footer class="h-10 px-3 border-t border-ink-700 bg-ink-900 flex items-center justify-between text-[10px] text-lo shrink-0">
     <span id="word-count">0 words · 0 blocks</span>
-    <span class="flex-1"></span>
     <button id="validation-btn" class="flex items-center gap-1.5 hover:text-hi">
       <span id="validation-icon">✓</span>
-      <span id="validation-text">All checks passed</span>
+      <span id="validation-text" class="hidden sm:inline">All checks passed</span>
     </button>
-    <span class="text-ink-600">|</span>
-    <span id="save-status" class="whitespace-nowrap">Not saved yet</span>
+    <span id="save-status" class="whitespace-nowrap hidden sm:inline">Not saved yet</span>
   </footer>
+
+  <!-- MODAL: Mobile Full-Screen Preview -->
+  <div id="modal-preview" class="fixed inset-0 z-50 bg-ink-900 flex-col hidden">
+    <div class="h-14 border-b border-ink-700 flex items-center justify-between px-3 shrink-0">
+      <span class="font-bold text-hi">Live Preview</span>
+      <button onclick="toggleMobilePreview()" class="touch-btn px-3 text-sm font-medium text-rose-light hover:bg-rose/10 rounded-lg">Close</button>
+    </div>
+    <div class="flex-1 overflow-y-auto p-4">
+      <div id="mobile-preview-content" class="preview-body"></div>
+    </div>
+  </div>
 
   <!-- MODAL: Import -->
   <div id="modal-import" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4">
     <div class="bg-ink-900 border border-ink-700 rounded-2xl w-full max-w-xl p-5 shadow-2xl flex flex-col max-h-[90vh]">
       <div class="flex items-center justify-between pb-3 border-b border-ink-700 shrink-0">
         <h3 class="text-base font-bold text-hi">Import notes</h3>
-        <button onclick="closeModal('modal-import')" class="text-lo hover:text-hi p-1">✕</button>
+        <button onclick="closeModal('modal-import')" class="touch-btn w-10 text-lo hover:text-hi">✕</button>
       </div>
-      <div class="flex gap-1 pt-3 shrink-0" role="tablist">
-        <button class="import-tab active px-3 py-1.5 text-xs font-semibold rounded-t-lg" data-tab="file">From file</button>
-        <button class="import-tab px-3 py-1.5 text-xs font-semibold rounded-t-lg" data-tab="github">From GitHub</button>
-        <button class="import-tab px-3 py-1.5 text-xs font-semibold rounded-t-lg" data-tab="paste">Paste</button>
+      <div class="flex gap-1 pt-3 shrink-0 overflow-x-auto" role="tablist">
+        <button class="import-tab active px-3 py-2 text-sm font-semibold rounded-t-lg whitespace-nowrap" data-tab="file">From file</button>
+        <button class="import-tab px-3 py-2 text-sm font-semibold rounded-t-lg whitespace-nowrap" data-tab="github">From GitHub</button>
+        <button class="import-tab px-3 py-2 text-sm font-semibold rounded-t-lg whitespace-nowrap" data-tab="paste">Paste</button>
       </div>
       <div class="flex-1 overflow-y-auto pt-4 space-y-3">
         <div class="import-panel" data-panel="file">
-          <div id="import-drop" onclick="document.getElementById('import-file-input').click()" class="border-2 border-dashed border-ink-600 hover:border-brand bg-ink-800/40 rounded-xl p-8 text-center cursor-pointer transition">
+          <div id="import-drop" onclick="document.getElementById('import-file-input').click()" class="border-2 border-dashed border-ink-600 hover:border-brand bg-ink-800/40 rounded-xl p-8 text-center cursor-pointer transition min-h-[150px] flex flex-col justify-center">
             <div class="text-3xl mb-2">📁</div>
             <p class="text-sm font-medium text-hi">Drop a .js bank file here</p>
-            <p class="text-xs text-lo mt-1">or click to browse — accepts .js, .md, .txt</p>
+            <p class="text-xs text-lo mt-1">or tap to browse</p>
             <input type="file" id="import-file-input" accept=".js,.md,.txt" class="hidden" onchange="handleImportFile(event)">
           </div>
         </div>
         <div class="import-panel hidden" data-panel="github">
-          <div class="space-y-2">
-            <label class="block text-xs text-mid">Owner
-              <input id="import-gh-owner" type="text" class="w-full bg-ink-800 text-xs text-hi border border-ink-700 rounded-lg px-2.5 py-1.5 mt-1 focus:outline-none focus:border-brand">
+          <div class="space-y-3">
+            <label class="block text-sm text-mid">Owner
+              <input id="import-gh-owner" type="text" class="w-full bg-ink-800 text-sm text-hi border border-ink-700 rounded-lg px-3 py-2 mt-1 min-h-[44px] focus:outline-none focus:border-brand">
             </label>
-            <label class="block text-xs text-mid">Repository
-              <input id="import-gh-repo" type="text" class="w-full bg-ink-800 text-xs text-hi border border-ink-700 rounded-lg px-2.5 py-1.5 mt-1 focus:outline-none focus:border-brand">
+            <label class="block text-sm text-mid">Repository
+              <input id="import-gh-repo" type="text" class="w-full bg-ink-800 text-sm text-hi border border-ink-700 rounded-lg px-3 py-2 mt-1 min-h-[44px] focus:outline-none focus:border-brand">
             </label>
-            <label class="block text-xs text-mid">Filename (under notes-banks/)
-              <input id="import-gh-filename" type="text" class="w-full bg-ink-800 font-mono text-xs text-hi border border-ink-700 rounded-lg px-2.5 py-1.5 mt-1 focus:outline-none focus:border-brand" placeholder="physics-notes.js">
+            <label class="block text-sm text-mid">Filename (under notes-banks/)
+              <input id="import-gh-filename" type="text" class="w-full bg-ink-800 font-mono text-sm text-hi border border-ink-700 rounded-lg px-3 py-2 mt-1 min-h-[44px] focus:outline-none focus:border-brand" placeholder="physics-notes.js">
             </label>
-            <button onclick="fetchFromGitHub()" class="mt-2 px-3 py-1.5 text-xs font-semibold rounded-lg bg-brand text-ink-900 hover:bg-brand-light">Fetch</button>
+            <button onclick="fetchFromGitHub()" class="touch-btn w-full px-3 text-sm font-semibold rounded-lg bg-brand text-ink-900 hover:bg-brand-light">Fetch</button>
           </div>
         </div>
         <div class="import-panel hidden" data-panel="paste">
-          <textarea id="import-paste" rows="10" class="w-full bg-ink-800 font-mono text-xs text-hi border border-ink-700 rounded-lg px-2.5 py-2 focus:outline-none focus:border-brand" placeholder="Paste bank code here: window.CBT_NOTE_BANKS.push(`...`) or bare bank text"></textarea>
-          <button onclick="parsePasted()" class="mt-2 px-3 py-1.5 text-xs font-semibold rounded-lg bg-brand text-ink-900 hover:bg-brand-light">Parse</button>
+          <textarea id="import-paste" rows="8" class="w-full bg-ink-800 font-mono text-xs text-hi border border-ink-700 rounded-lg p-3 focus:outline-none focus:border-brand" placeholder="window.CBT_NOTE_BANKS.push(`...`) or raw text"></textarea>
+          <button onclick="parsePasted()" class="touch-btn w-full mt-2 px-3 text-sm font-semibold rounded-lg bg-brand text-ink-900 hover:bg-brand-light">Parse</button>
         </div>
 
         <div id="import-summary" class="bg-ink-800/60 border border-ink-700 rounded-xl p-3 text-xs hidden">
@@ -224,16 +274,16 @@
           <div id="import-warnings" class="text-amber text-[11px] space-y-1 mt-1"></div>
         </div>
 
-        <div class="flex items-center gap-4 text-xs pt-2">
-          <span class="text-mid">Merge mode:</span>
-          <label class="flex items-center gap-1.5 cursor-pointer text-hi"><input type="radio" name="import-mode" value="replace" class="accent-brand"><span>Replace</span></label>
-          <label class="flex items-center gap-1.5 cursor-pointer text-hi"><input type="radio" name="import-mode" value="merge" class="accent-brand" checked><span>Merge</span></label>
-          <label class="flex items-center gap-1.5 cursor-pointer text-hi"><input type="radio" name="import-mode" value="append" class="accent-brand"><span>Append</span></label>
+        <div class="flex flex-wrap items-center gap-4 text-sm pt-2 pb-2">
+          <span class="text-mid font-medium">Merge mode:</span>
+          <label class="flex items-center gap-2 cursor-pointer text-hi min-h-[44px]"><input type="radio" name="import-mode" value="replace" class="accent-brand w-4 h-4"><span>Replace</span></label>
+          <label class="flex items-center gap-2 cursor-pointer text-hi min-h-[44px]"><input type="radio" name="import-mode" value="merge" class="accent-brand w-4 h-4" checked><span>Merge</span></label>
+          <label class="flex items-center gap-2 cursor-pointer text-hi min-h-[44px]"><input type="radio" name="import-mode" value="append" class="accent-brand w-4 h-4"><span>Append</span></label>
         </div>
       </div>
       <div class="flex justify-end gap-2 pt-3 border-t border-ink-700 shrink-0">
-        <button onclick="closeModal('modal-import')" class="px-3 py-1.5 text-xs text-mid hover:text-hi">Cancel</button>
-        <button id="import-confirm" onclick="executeImport()" disabled class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-brand text-ink-900 disabled:opacity-40 hover:bg-brand-light">Import →</button>
+        <button onclick="closeModal('modal-import')" class="touch-btn px-4 text-sm text-mid hover:text-hi">Cancel</button>
+        <button id="import-confirm" onclick="executeImport()" disabled class="touch-btn px-6 text-sm font-semibold rounded-lg bg-brand text-ink-900 disabled:opacity-40 hover:bg-brand-light">Import</button>
       </div>
     </div>
   </div>
@@ -242,30 +292,30 @@
   <div id="modal-export" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4">
     <div class="bg-ink-900 border border-ink-700 rounded-2xl w-full max-w-2xl p-5 shadow-2xl flex flex-col max-h-[90vh]">
       <div class="flex items-center justify-between pb-3 border-b border-ink-700 shrink-0">
-        <h3 class="text-base font-bold text-hi">Export notes bank</h3>
-        <button onclick="closeModal('modal-export')" class="text-lo hover:text-hi p-1">✕</button>
+        <h3 class="text-base font-bold text-hi">Export bank</h3>
+        <button onclick="closeModal('modal-export')" class="touch-btn w-10 text-lo hover:text-hi">✕</button>
       </div>
-      <div class="pt-3 space-y-3 shrink-0">
+      <div class="pt-3 space-y-4 shrink-0">
         <div class="flex items-center gap-3">
-          <label class="text-xs text-mid whitespace-nowrap">Filename:</label>
-          <input id="export-filename" type="text" class="flex-1 bg-ink-800 text-xs font-mono text-hi border border-ink-700 rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-brand">
+          <label class="text-sm text-mid whitespace-nowrap">Filename:</label>
+          <input id="export-filename" type="text" class="flex-1 bg-ink-800 text-sm font-mono text-hi border border-ink-700 rounded-lg px-3 py-2 min-h-[44px] focus:outline-none focus:border-brand">
         </div>
-        <div class="flex items-center gap-4 text-xs">
+        <div class="flex flex-wrap items-center gap-4 text-sm">
           <span class="text-mid">Format:</span>
-          <label class="flex items-center gap-1.5 cursor-pointer text-hi"><input type="radio" name="export-format" value="js" class="accent-brand" checked onchange="updateExportPreview()"><span>.js bank file</span></label>
-          <label class="flex items-center gap-1.5 cursor-pointer text-hi"><input type="radio" name="export-format" value="zip" class="accent-brand" onchange="updateExportPreview()"><span>.md files (zip)</span></label>
+          <label class="flex items-center gap-2 cursor-pointer text-hi min-h-[44px]"><input type="radio" name="export-format" value="js" class="accent-brand w-4 h-4" checked onchange="updateExportPreview()"><span>.js bank</span></label>
+          <label class="flex items-center gap-2 cursor-pointer text-hi min-h-[44px]"><input type="radio" name="export-format" value="zip" class="accent-brand w-4 h-4" onchange="updateExportPreview()"><span>.md files (zip)</span></label>
         </div>
       </div>
-      <div class="flex-1 flex flex-col min-h-0 mt-3">
-        <div class="flex justify-between items-center text-[10px] text-lo mb-1">
-          <span>Preview:</span>
+      <div class="flex-1 flex flex-col min-h-0 mt-3 bg-canvas border border-ink-700 rounded-xl overflow-hidden">
+        <div class="px-3 py-2 border-b border-ink-700 flex justify-between items-center text-[10px] text-lo bg-ink-900">
+          <span>Preview</span>
           <span id="export-stats" class="font-mono text-brand-light">0 KB</span>
         </div>
-        <pre id="export-preview" class="flex-1 bg-canvas border border-ink-700 rounded-xl p-3 font-mono text-[11px] text-mid overflow-auto whitespace-pre-wrap select-all min-h-[200px]"></pre>
+        <pre id="export-preview" class="flex-1 p-3 font-mono text-[11px] text-mid overflow-auto whitespace-pre-wrap select-all min-h-[150px]"></pre>
       </div>
-      <div class="flex justify-end gap-2 pt-3 border-t border-ink-700 shrink-0">
-        <button onclick="copyExport()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-ink-800 hover:bg-ink-700 border border-ink-700 text-hi">Copy code</button>
-        <button onclick="downloadExport()" class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-amber text-ink-900 hover:bg-amber-light">Download</button>
+      <div class="flex justify-end gap-2 pt-4 border-t border-ink-700 shrink-0">
+        <button onclick="copyExport()" class="touch-btn px-4 text-sm font-semibold rounded-lg bg-ink-800 hover:bg-ink-700 border border-ink-700 text-hi">Copy code</button>
+        <button onclick="downloadExport()" class="touch-btn px-6 text-sm font-semibold rounded-lg bg-amber text-ink-900 hover:bg-amber-light">Download</button>
       </div>
     </div>
   </div>
@@ -275,33 +325,30 @@
     <div class="bg-ink-900 border border-ink-700 rounded-2xl w-full max-w-md p-5 shadow-2xl flex flex-col max-h-[90vh]">
       <div class="flex items-center justify-between pb-3 border-b border-ink-700 shrink-0">
         <h3 class="text-base font-bold text-hi">Publish to GitHub</h3>
-        <button onclick="closeModal('modal-publish')" class="text-lo hover:text-hi p-1">✕</button>
+        <button onclick="closeModal('modal-publish')" class="touch-btn w-10 text-lo hover:text-hi">✕</button>
       </div>
-      <div class="flex-1 overflow-y-auto pt-3 space-y-3">
-        <label class="block text-xs text-mid">GitHub Username / Org
-          <input id="gh-owner" type="text" class="w-full bg-ink-800 text-xs text-hi border border-ink-700 rounded-lg px-2.5 py-1.5 mt-1 focus:outline-none focus:border-brand">
+      <div class="flex-1 overflow-y-auto pt-4 space-y-4">
+        <label class="block text-sm text-mid">GitHub Username / Org
+          <input id="gh-owner" type="text" class="w-full bg-ink-800 text-sm text-hi border border-ink-700 rounded-lg px-3 py-2 mt-1 min-h-[44px] focus:outline-none focus:border-brand">
         </label>
-        <label class="block text-xs text-mid">Repository
-          <input id="gh-repo" type="text" class="w-full bg-ink-800 text-xs text-hi border border-ink-700 rounded-lg px-2.5 py-1.5 mt-1 focus:outline-none focus:border-brand">
+        <label class="block text-sm text-mid">Repository
+          <input id="gh-repo" type="text" class="w-full bg-ink-800 text-sm text-hi border border-ink-700 rounded-lg px-3 py-2 mt-1 min-h-[44px] focus:outline-none focus:border-brand">
         </label>
-        <label class="block text-xs text-mid">File name (under notes-banks/)
-          <input id="publish-filename" type="text" class="w-full bg-ink-800 font-mono text-xs text-hi border border-ink-700 rounded-lg px-2.5 py-1.5 mt-1 focus:outline-none focus:border-brand">
+        <label class="block text-sm text-mid">File name (under notes-banks/)
+          <input id="publish-filename" type="text" class="w-full bg-ink-800 font-mono text-sm text-hi border border-ink-700 rounded-lg px-3 py-2 mt-1 min-h-[44px] focus:outline-none focus:border-brand">
         </label>
-        <div id="publish-preflight" class="bg-ink-800/60 border border-ink-700 rounded-lg p-3 text-[11px] space-y-1 text-lo"></div>
-        <div id="publish-script-tag" class="bg-canvas border border-brand/30 rounded-lg p-2.5 text-[10px] font-mono text-brand-light hidden">
-          <div class="flex items-center justify-between mb-1">
-            <span class="text-hi font-sans font-semibold">Add to notes.html:</span>
-            <button onclick="copyScriptTag()" class="text-[10px] px-2 py-0.5 rounded bg-brand text-ink-900 font-sans font-semibold hover:bg-brand-light">Copy</button>
+        <div id="publish-preflight" class="bg-ink-800/60 border border-ink-700 rounded-lg p-3 text-xs space-y-1 text-lo"></div>
+        <div id="publish-script-tag" class="bg-canvas border border-brand/30 rounded-lg p-3 text-[11px] font-mono text-brand-light hidden">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-hi font-sans font-semibold text-sm">Add to notes.html:</span>
+            <button onclick="copyScriptTag()" class="touch-btn px-3 text-[10px] rounded bg-brand text-ink-900 font-sans font-semibold hover:bg-brand-light">Copy</button>
           </div>
           <code id="script-tag-text" class="block break-all"></code>
         </div>
-        <div class="text-[10px] text-lo">
-          The GitHub token is read server-side from <span class="font-mono text-brand-light">process.env.GITHUB_TOKEN</span> in Vercel.
-        </div>
       </div>
-      <div class="flex justify-end gap-2 pt-3 border-t border-ink-700 shrink-0">
-        <button onclick="closeModal('modal-publish')" class="px-3 py-1.5 text-xs text-mid hover:text-hi">Cancel</button>
-        <button id="publish-btn" onclick="executePublish()" class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-brand text-ink-900 hover:bg-brand-light">Publish</button>
+      <div class="flex justify-end gap-2 pt-4 border-t border-ink-700 shrink-0">
+        <button onclick="closeModal('modal-publish')" class="touch-btn px-4 text-sm text-mid hover:text-hi">Cancel</button>
+        <button id="publish-btn" onclick="executePublish()" class="touch-btn px-6 text-sm font-semibold rounded-lg bg-brand text-ink-900 hover:bg-brand-light">Publish</button>
       </div>
     </div>
   </div>
@@ -310,39 +357,16 @@
   <div id="modal-confirm" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4">
     <div class="bg-ink-900 border border-ink-700 rounded-2xl w-full max-w-md p-5 shadow-2xl">
       <h3 id="confirm-title" class="text-base font-bold text-hi mb-2">Confirm</h3>
-      <p id="confirm-message" class="text-xs text-mid mb-4"></p>
+      <p id="confirm-message" class="text-sm text-mid mb-5 whitespace-pre-wrap"></p>
       <div class="flex justify-end gap-2">
-        <button id="confirm-cancel" class="px-3 py-1.5 text-xs text-mid hover:text-hi">Cancel</button>
-        <button id="confirm-ok" class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-rose text-white hover:bg-rose-light">Confirm</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- MODAL: Shortcut help -->
-  <div id="modal-shortcuts" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden items-center justify-center p-4">
-    <div class="bg-ink-900 border border-ink-700 rounded-2xl w-full max-w-md p-5 shadow-2xl">
-      <div class="flex items-center justify-between pb-3 border-b border-ink-700">
-        <h3 class="text-base font-bold text-hi">Keyboard shortcuts</h3>
-        <button onclick="closeModal('modal-shortcuts')" class="text-lo hover:text-hi p-1">✕</button>
-      </div>
-      <div class="pt-3 space-y-1 text-xs text-mid">
-        <div class="grid grid-cols-2 gap-x-4 gap-y-1.5">
-          <div>Save</div><div class="font-mono text-hi">Ctrl/Cmd + S</div>
-          <div>Publish</div><div class="font-mono text-hi">Ctrl/Cmd + Enter</div>
-          <div>Undo</div><div class="font-mono text-hi">Ctrl/Cmd + Z</div>
-          <div>Redo</div><div class="font-mono text-hi">Ctrl/Cmd + Shift + Z</div>
-          <div>Bold / Italic</div><div class="font-mono text-hi">Ctrl/Cmd + B / I</div>
-          <div>Toggle preview</div><div class="font-mono text-hi">Ctrl/Cmd + P</div>
-          <div>Import</div><div class="font-mono text-hi">Ctrl/Cmd + Shift + I</div>
-          <div>Export</div><div class="font-mono text-hi">Ctrl/Cmd + Shift + E</div>
-          <div>Close / cancel</div><div class="font-mono text-hi">Esc</div>
-        </div>
+        <button id="confirm-cancel" class="touch-btn px-4 text-sm text-mid hover:text-hi">Cancel</button>
+        <button id="confirm-ok" class="touch-btn px-6 text-sm font-semibold rounded-lg bg-rose text-white hover:bg-rose-light">Confirm</button>
       </div>
     </div>
   </div>
 
   <!-- Toast host -->
-  <div id="toast-host" class="fixed bottom-12 right-4 z-50 flex flex-col gap-2 items-end"></div>
+  <div id="toast-host" class="fixed bottom-16 sm:bottom-12 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 items-center pointer-events-none"></div>
 
   <script defer src="js/notes-builder.js"></script>
 </body>
