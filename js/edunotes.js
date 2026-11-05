@@ -1819,6 +1819,11 @@ Good writing is not about using the biggest words. It is about helping someone e
 
 function boot() {
     initializeEvents();
+
+  if (window.CBT_NOTE_BANKS && window.CBT_NOTE_BANKS.length > 0) {
+      state.courses = [];
+    }
+  
     if(!location.hash||location.hash==='#main') {
       try{history.replaceState(null,'',state.ui.lastRoute||'#/library');}catch{}
     }
