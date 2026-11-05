@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-[#05070F] text-[#EAF0FB]">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>eduCBT Notes Builder</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            canvas: '#05070F', ink: { 900: '#0A0F1C', 800: '#111827', 700: '#1F293D', 600: '#33456A' },
+            hi: '#EAF0FB', mid: '#B7C4DB', lo: '#8A9AB8',
+            brand: { light: '#5EEAD4', DEFAULT: '#14B8A6', dark: '#0F766E' },
+            amber: { light: '#FCD34D', DEFAULT: '#FBBF24', dark: '#F59E0B' },
+            violet: { light: '#A78BFA', DEFAULT: '#7C3AED' },
+            rose: { light: '#FB7185', DEFAULT: '#BE123C' },
+            emerald: { light: '#34D399', DEFAULT: '#10B981' }
+          },
+          fontFamily: { mono: ['JetBrains Mono', 'Fira Code', 'Monaco', 'Consolas', 'monospace'] }
+        }
+      }
+    }
+  </script>
+  <script>
+    window.MathJax = {
+      tex: { inlineMath: [['\\(', '\\)'], ['$', '$']], displayMath: [['\\[', '\\]'], ['$$', '$$']] },
+      options: { skipHtmlTags: ['script', 'noscript', 'style', 'textarea', 'pre'] }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  <style>
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0A0F1C; }
+    ::-webkit-scrollbar-thumb { background: #1F293D; border-radius: 3px; }
+  </style>
+</head>
+<body class="h-full flex flex-col font-sans overflow-hidden antialiased selection:bg-brand/30">
+
+  <header class="h-14 border-b border-ink-700 bg-ink-900 px-4 flex items-center justify-between shrink-0 z-20">
+    <div class="flex items-center space-x-3">
+      <a href="index.html" class="text-mid hover:text-hi text-sm">← CBT</a>
+      <span class="text-ink-600">|</span>
+      <span class="text-2xl">📓</span>
+      <span class="font-bold tracking-tight text-hi">eduCBT</span>
+      <span class="text-xs px-2 py-0.5 rounded bg-brand-dark/40 text-brand-light font-mono border border-brand/30">Notes Builder</span>
+      <input id="bank-subject-input" type="text" value="Untitled Subject" placeholder="Subject name..."
+             class="bg-transparent text-sm font-semibold text-hi focus:outline-none focus:border-b focus:border-brand px-2 py-0.5 rounded hover:bg-ink-800 transition w-56" />
+    </div>
+    <div class="flex items-center space-x-2">
+      <span id="save-indicator" class="text-xs text-emerald font-mono opacity-0 transition-opacity mr-2">💾 Saved</span>
+      <button onclick="openExportModal()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-amber text-ink-900 hover:bg-amber-light transition">Export</button>
+      <button onclick="openPublishModal()" class="px-3 py-1.5 text-xs font-semibold rounded-lg bg-brand text-ink-900 hover:bg-brand-light transition">Publish</button>
+    </div>
+  </header>
+
+  <main class="flex-1 flex overflow-hidden">
+    <aside class="w-64 border-r border-ink-700 bg-ink-900 flex flex-col shrink-0">
+      <div class="p-3 border-b border-ink-700/60">
+        <button onclick="addTopic()" class="w-full py-2 px-3 text-xs font-semibold rounded-lg bg-ink-800 hover:bg-ink-700 text-brand-light border border-ink-700 hover:border-brand/40 transition">➕ New Topic</button>
+      </div>
+      <div id="topics-tree" class="flex-1 overflow-y-auto p-2 space-y-1"></div>
+    </aside>
+
+    <section class="flex-1 flex flex-col bg-canvas overflow-hidden">
+      <div id="editor-pane" class="flex-1 overflow-y-auto p-6 md:p-8"></div>
+    </section>
+  </main>
+
+  <!-- Modal: Export -->
+  <div id="modal-export" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-ink-900 border border-ink-700 rounded-2xl w-full max-w-2xl p-6 shadow-2xl space-y-4 max-h-[90vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-ink-700 pb-3">
+        <h3 class="text-base font-bold text-hi">📤 Export note bank</h3>
+        <button onclick="closeModal('modal-export')" class="text-lo hover:text-hi">✕</button>
+      </div>
+      <div class="flex items-center gap-3">
+        <label class="text-xs text-mid whitespace-nowrap">Filename:</label>
+        <input id="export-filename" type="text" class="flex-1 bg-ink-800 text-xs font-mono text-hi border border-ink-700 rounded-lg px-3 py-1.5 focus:outline-none focus:border-brand">
+      </div>
+      <pre id="export-code-preview" class="flex-1 bg-canvas border border-ink-700 rounded-xl p-3 font-mono text-[11px] text-mid overflow-auto whitespace-pre-wrap max-h-[50vh]"></pre>
+      <div class="flex justify-end gap-2 pt-3 border-t border-ink-700">
+        <button onclick="copyExportCode()" class="px-4 py-2 text-xs font-semibold rounded-lg bg-ink-800 hover:bg-ink-700 border border-ink-700 text-hi">Copy Code</button>
+        <button onclick="downloadExportFile()" class="px-4 py-2 text-xs font-semibold rounded-lg bg-amber text-ink-900 hover:bg-amber-light">Download</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Publish -->
+  <div id="modal-publish" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-ink-900 border border-ink-700 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-ink-700 pb-3">
+        <h3 class="text-base font-bold text-hi">🚀 Publish to GitHub</h3>
+        <button onclick="closeModal('modal-publish')" class="text-lo hover:text-hi">✕</button>
+      </div>
+      <div class="space-y-3">
+        <div>
+          <label class="text-xs text-mid block mb-1">GitHub Username / Org</label>
+          <input id="gh-owner" type="text" class="w-full bg-ink-800 text-xs text-hi border border-ink-700 rounded-lg px-3 py-2 focus:outline-none focus:border-brand">
+        </div>
+        <div>
+          <label class="text-xs text-mid block mb-1">Repository</label>
+          <input id="gh-repo" type="text" class="w-full bg-ink-800 text-xs text-hi border border-ink-700 rounded-lg px-3 py-2 focus:outline-none focus:border-brand">
+        </div>
+        <div>
+          <label class="text-xs text-mid block mb-1">File name (saved under notes-banks/)</label>
+          <input id="publish-filename" type="text" class="w-full bg-ink-800 font-mono text-xs text-hi border border-ink-700 rounded-lg px-3 py-2 focus:outline-none focus:border-brand">
+        </div>
+        <div class="text-[11px] text-lo bg-ink-800/60 border border-ink-700 rounded-lg p-2">
+          The GitHub token is read server-side from <span class="font-mono text-brand-light">process.env.GITHUB_TOKEN</span> in Vercel. No token is sent from this page.
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 pt-3 border-t border-ink-700">
+        <button onclick="closeModal('modal-publish')" class="px-4 py-2 text-xs text-mid hover:text-hi">Cancel</button>
+        <button id="btn-do-publish" onclick="executePublish()" class="px-4 py-2 text-xs font-semibold rounded-lg bg-brand text-ink-900 hover:bg-brand-light">Publish</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/notes-builder.js"></script>
+</body>
+</html>
