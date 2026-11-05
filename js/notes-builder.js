@@ -1143,49 +1143,72 @@ function parseBankText(raw) {
   if (!raw) return null;
   let text = String(raw);
 
-  // Strip window.CBT_NOTE_BANKS.push(` ... `) wrapper if present
+  // Strip window.CBT_NOTE_BANKS.push(` ... `) wrapper
   const m = text.match(/window\.CBT_NOTE_BANKS\.push\(\s*`([\s\S]*?)`\s*\)/);
   if (m) {
     text = m[1].replace(/\\`/g, '`').replace(/\\\$/g, '$').replace(/\\\\/g, '\\');
   } else {
-    // Try to find backtick content
     const m2 = text.match(/`([\s\S]*?)`/);
     if (m2) text = m2[1];
   }
 
-  const lines = text.split('\n');
-  let subject = null, description = '';
-  const topics = [];
-  let currentTopic = null, currentLesson = null, lessonLines = [];
+  // Split the text into individual Subjects!
+  const subjectChunks = text.split(/\n(?=Subject:\s*)/i);
+  const allSubjects = [];
 
-  function flushLesson() {
-    if (!currentLesson) return;
-    const body = lessonLines.join('\n').trim();
-    if (currentTopic) currentTopic.lessons.push({ title: currentLesson, body });
-    currentLesson = null; lessonLines = [];
+  for (const chunk of subjectChunks) {
+    if (!chunk.trim()) continue;
+
+    let subject = null, description = '';
+    const topics = [];
+    let currentTopic = null, currentLesson = null, lessonLines = [];
+
+    function flushLesson() {
+      if (!currentLesson) return;
+      const body = lessonLines.join('\n').trim();
+      if (currentTopic) currentTopic.lessons.push({ title: currentLesson, body });
+      currentLesson = null; lessonLines = [];
+    }
+    
+    function flushTopic() {
+      flushLesson();
+      if (currentTopic && currentTopic.lessons.length) topics.push(currentTopic);
+      currentTopic = null;
+    }
+
+    chunk.split('\n').forEach(l => {
+      const subM = l.match(/^Subject:\s*(.*)$/i);
+      if (subM) { subject = subM[1].trim(); return; }
+      
+      const descM = l.match(/^Description:\s*(.*)$/i);
+      if (descM) { description = descM[1].trim(); return; }
+      
+      const topM = l.match(/^Topic:\s*(.*)$/i);
+      if (topM) { flushTopic(); currentTopic = { name: topM[1].trim(), lessons: [] }; return; }
+      
+      const lessM = l.match(/^Lesson:\s*(.*)$/i);
+      if (lessM) { flushLesson(); currentLesson = lessM[1].trim(); lessonLines = []; return; }
+      
+      if (currentLesson) lessonLines.push(l);
+    });
+    flushTopic();
+
+    if (subject && topics.length) {
+      allSubjects.push({ subject, description, topics });
+    }
   }
-  function flushTopic() {
-    flushLesson();
-    if (currentTopic && currentTopic.lessons.length) topics.push(currentTopic);
-    currentTopic = null;
-  }
 
-  lines.forEach(raw => {
-    const l = raw;
-    const subM = l.match(/^Subject:\s*(.*)$/i);
-    if (subM) { flushTopic(); subject = subM[1].trim(); return; }
-    const descM = l.match(/^Description:\s*(.*)$/i);
-    if (descM) { description = descM[1].trim(); return; }
-    const topM = l.match(/^Topic:\s*(.*)$/i);
-    if (topM) { flushTopic(); currentTopic = { name: topM[1].trim(), lessons: [] }; return; }
-    const lessM = l.match(/^Lesson:\s*(.*)$/i);
-    if (lessM) { flushLesson(); currentLesson = lessM[1].trim(); lessonLines = []; return; }
-    if (currentLesson) lessonLines.push(l);
-  });
-  flushTopic();
-
-  if (!subject || !topics.length) return null;
-  return { subject, description, topics };
+  if (allSubjects.length === 0) return null;
+  
+  // If there's only one subject, return it directly
+  if (allSubjects.length === 1) return allSubjects[0];
+  
+  // If there are multiple subjects, merge them into one dummy object so the import modal can show them all
+  return {
+    subject: `Multiple (${allSubjects.length}) Subjects`,
+    description: allSubjects.map(s => s.subject).join(', '),
+    topics: allSubjects.flatMap(s => s.topics)
+  };
 }
 
 function executeImport() {
