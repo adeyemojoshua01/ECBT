@@ -942,8 +942,10 @@ function buildBankText() {
 }
 
 function buildJSExport() {
-  const escaped = buildBankText().replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$\{/g, '\\${');
-  return `window.CBT_NOTE_BANKS = window.CBT_NOTE_BANKS || [];\n\nwindow.CBT_NOTE_BANKS.push(\`${escaped}\`);\n`;
+  const bankText = buildBankText();
+  // Only escape backslashes and template literal variables, NOT backticks
+  const escaped = bankText.replace(/\\/g, '\\\\').replace(/\$\{/g, '\\${');
+  return `window.CBT_NOTE_BANKS = window.CBT_NOTE_BANKS || [];\n\nwindow.CBT_NOTE_BANKS.push(String.raw\`${escaped}\`);\n`;
 }
 
 function updateExportPreview() {
