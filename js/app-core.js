@@ -273,15 +273,22 @@ window.app = {
                         }).join('')}
                     </div>
                 </div>` : ''}
-                <div class="grid grid-cols-1 md:grid-cols-1 gap-6 w-full max-w-md">
-                    <button onclick="event.preventDefault(); app.showCandidateOptions()" class="group bg-white p-8 rounded-xl shadow-md hover:shadow-xl transition border text-center">
-                        <div class="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-blue-200">
-                            <i class="fas fa-user-graduate text-2xl text-blue-600"></i>
-                        </div>
-                        <h3 class="text-xl font-bold text-gray-800">Candidate</h3>
-                        <p class="text-gray-500 mt-2">Take the examination</p>
-                    </button>
-                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl">
+    <button onclick="event.preventDefault(); app.showCandidateOptions()" class="group bg-white p-8 rounded-xl shadow-md hover:shadow-xl transition border text-center">
+        <div class="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-blue-200">
+            <i class="fas fa-user-graduate text-2xl text-blue-600"></i>
+        </div>
+        <h3 class="text-xl font-bold text-gray-800">Candidate</h3>
+        <p class="text-gray-500 mt-2">Take the examination</p>
+    </button>
+    <a href="notes.html" class="group bg-white p-8 rounded-xl shadow-md hover:shadow-xl transition border text-center block">
+        <div class="bg-purple-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-purple-200">
+            <i class="fas fa-book-open text-2xl text-purple-600"></i>
+        </div>
+        <h3 class="text-xl font-bold text-gray-800">Notes</h3>
+        <p class="text-gray-500 mt-2">Read and study lesson notes</p>
+    </a>
+</div>
             </div>`;
     },
 
