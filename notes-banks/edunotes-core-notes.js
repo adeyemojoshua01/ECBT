@@ -139,9 +139,9 @@ From flat shapes to solid objects
 Area measures a two-dimensional surface in square units. Volume measures three-dimensional space in cubic units.
 
 A rectangle has area $A = lw$. A rectangular prism has volume $V = lwh$. Always label your answer with the correct units.
+`);
 
-Topic: Science
-Subject: Science
+window.CBT_NOTE_BANKS.push(`Subject: Science
 Description: A closer look at the world around you.
 
 Topic: The living world
@@ -262,8 +262,9 @@ Energy changes form
 Energy can be transferred between objects and transformed between stores. It is conserved: the total amount stays the same in a closed system.
 
 A falling ball transfers energy from its gravitational store to its kinetic store. When it lands, energy is transferred to the surroundings by sound and heating.
+`);
 
-Subject: English
+window.CBT_NOTE_BANKS.push(`Subject: English
 Description: Discover your voice, one word at a time.
 
 Topic: The writer's toolkit
@@ -365,8 +366,9 @@ Meaning beyond the literal
 Poetry uses sound, imagery, and structure to make language do more. A metaphor describes one thing as another to reveal a connection.
 
 The phrase "the city is a restless sea" connects movement and noise with waves. Explain the impression it creates rather than simply naming the technique.
+`);
 
-Subject: Social Studies
+window.CBT_NOTE_BANKS.push(`Subject: Social Studies
 Description: Understand our past. Explore our shared world.
 
 Topic: Our shared world
@@ -432,8 +434,9 @@ Exchange and connection
 Trade moves goods, services, and ideas between communities. People trade because resources and skills are unevenly distributed.
 
 A region that grows grain may exchange it for tools made elsewhere. Along these routes, technologies, languages, and cultural practices can spread too.
+`);
 
-Subject: Computer Science
+window.CBT_NOTE_BANKS.push(`Subject: Computer Science
 Description: Turn a little logic into big possibilities.
 
 Topic: Computational thinking
