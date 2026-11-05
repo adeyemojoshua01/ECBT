@@ -15,11 +15,14 @@ Lesson: test
 # Heading
 
 ## Heading
-**bold text***italic text*
+
+**bold text**
+
+*italic text*
+
 [link text](https://example.com)
 
 - item
-
 
 \`\`\`javascript
 // code
@@ -69,4 +72,5 @@ Walk through the idea step by step.
 type: tip
 title: A worked example
 Walk through the idea step by step.
-\`\`\``);
+\`\`\`
+`);
