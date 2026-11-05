@@ -845,7 +845,7 @@ Good writing is not about using the biggest words. It is about helping someone e
     const initials=name.split(/\s+/).slice(0,2).map(part=>part[0] || '').join('').toUpperCase();
     return `<div class="nav-backdrop" data-action="close-nav"></div><aside class="sidebar" aria-label="Main navigation">
       <button class="brand" data-action="route" data-route="#/library" aria-label="EduNotes Library">${brand()}</button><button class="icon-btn sidebar-close" data-action="close-nav" aria-label="Close navigation">${icon('close')}</button><p class="brand-tagline">A little wiser, every day.</p>
-      <nav class="sidebar-nav"><p class="nav-label">YOUR WORKSPACE</p>
+      <nav class="sidebar-nav"><p class="nav-label">YOUR WORKSPACE</p>         <button class="nav-item" onclick="location.href='index.html'">${icon('arrowLeft')} Back to CBT</button>
         <button class="nav-item ${['library','subject','lesson'].includes(view)?'active':''}" data-action="route" data-route="#/library" ${view==='library'?'aria-current="page"':''}>${icon('library')} Library</button>
         <button class="nav-item ${view==='learning'?'active':''}" data-action="route" data-route="#/learning" ${view==='learning'?'aria-current="page"':''}>${icon('learning')} My learning</button>
         <button class="nav-item ${view==='bookmarks'?'active':''}" data-action="route" data-route="#/bookmarks" ${view==='bookmarks'?'aria-current="page"':''}>${icon('bookmark')} Bookmarks${state.bookmarks.length?`<span class="nav-count">${state.bookmarks.length}</span>`:''}</button>
@@ -1032,7 +1032,8 @@ Good writing is not about using the biggest words. It is about helping someone e
     frame.addEventListener('load',()=>{runtime.previewReady=true;renderPreview();});
     const fonts=$('link[href*="fonts.googleapis.com/css2"]')?.outerHTML || '';
     const mathStyle=$('link[href*="katex.min.css"]')?.outerHTML || '';
-    frame.srcdoc=`<!DOCTYPE html><html lang="en" data-theme="${isDark()?'dark':'light'}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>EduNotes Student Preview</title>${fonts}${mathStyle}<style>${$('#app-styles').textContent}</style></head><body class="preview-document"><main id="preview-root"></main></body></html>`;
+    const appStyles='<link rel="stylesheet" href="css/edunotes.css">';
+    frame.srcdoc=`<!DOCTYPE html><html lang="en" data-theme="${isDark()?'dark':'light'}"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>EduNotes Student Preview</title>${fonts}${mathStyle}${appStyles}</head><body class="preview-document"><main id="preview-root"></main></body></html>`;
     $('#split-handle')?.addEventListener('pointerdown',beginResize);
     $('#split-handle')?.addEventListener('keydown',event=>{
       if (!['ArrowLeft','ArrowRight'].includes(event.key)) return;
@@ -1762,10 +1763,68 @@ Good writing is not about using the biggest words. It is about helping someone e
     matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{if(state.ui.theme==='system')applyTheme();});
   }
 
-  function boot() {
+  window.EduNotes = {
+  get state() { return state; },
+  mergeBanks: function (banks) {
+    if (!Array.isArray(banks) || !banks.length) return 0;
+    const byName = new Map(state.courses.map(c => [c.title.toLowerCase(), c]));
+    let added = 0;
+    for (const bank of banks) {
+      if (!bank || !bank.subject) continue;
+      const key = String(bank.subject).toLowerCase();
+      let course = byName.get(key);
+      if (!course) {
+        const id = slugify(bank.subject) || uid('course');
+        course = {
+          id, subject: id, title: bank.subject,
+          color: '#2563EB', icon: 'book', description: bank.description || '',
+          chapters: []
+        };
+        state.courses.push(course);
+        byName.set(key, course);
+      }
+      for (const t of bank.topics || []) {
+        let chapter = course.chapters.find(ch => ch.title === t.name);
+        if (!chapter) {
+          chapter = { id: uid('chapter'), title: t.name, order: course.chapters.length, lessons: [] };
+          course.chapters.push(chapter);
+        }
+        for (const lesson of t.lessons || []) {
+          const existing = chapter.lessons.find(l => l.title === lesson.title);
+          if (existing && existing.body === lesson.body) continue;
+          const meta = { title: lesson.title, subject: course.id, grade: 8,
+                         difficulty: 'Easy', duration: lesson.duration || 5,
+                         tags: [], prerequisites: [] };
+          chapter.lessons.push({
+            id: lesson.id || uid('lesson'),
+            title: lesson.title,
+            order: chapter.lessons.length,
+            status: 'published',
+            frontmatter: meta,
+            body: serializeLesson(meta, lesson.body),
+            publishedBody: serializeLesson(meta, lesson.body),
+            version: 1,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+          added++;
+        }
+      }
+    }
+    try { persist(); } catch {}
+    return added;
+  },
+  rerender: function () { renderApp(); }
+};
+
+function boot() {
     initializeEvents();
     if(!location.hash||location.hash==='#main') {
       try{history.replaceState(null,'',state.ui.lastRoute||'#/library');}catch{}
+    }
+        if (window.CBT_NOTE_BANKS && window.CBT_NOTE_BANKS.length && window.__noteBanksLoaded !== true) {
+      window.__noteBanksLoaded = true;
+      try { window.EduNotes.mergeBanks(window.CBT_NOTE_BANKS); } catch (e) { console.warn('Note bank merge failed:', e); }
     }
     renderApp();
   }
