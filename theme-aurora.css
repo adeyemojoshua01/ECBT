@@ -1,0 +1,314 @@
+/* =============================================================
+   AURORA OBSIDIAN — Theme overlay
+   Load AFTER style.css. Remaps existing Tailwind classes only.
+   ============================================================= */
+
+:root {
+  color-scheme: dark;
+
+  /* Neutral scale */
+  --ink-950: #05070F;  --ink-900: #0A0F1C;  --ink-850: #0F1729;
+  --ink-800: #141E33;  --ink-700: #1C2942;  --ink-600: #27364F;  --ink-500: #33456A;
+
+  /* Text */
+  --tx-hi:  #EAF0FB;   --tx-mid: #B7C4DB;   --tx-lo:  #8A9AB8;
+
+  /* Primary — Aurora Teal */
+  --teal-300: #5EEAD4; --teal-400: #2DD4BF; --teal-500: #14B8A6;
+  --teal-600: #0D9488; --teal-700: #0F766E; --teal-800: #115E59;
+
+  /* Accent — Solar Amber */
+  --amber-300: #FCD34D; --amber-400: #FBBF24;
+  --amber-500: #F59E0B; --amber-600: #D97706; --on-amber: #1A1206;
+
+  /* Secondary — Electric Violet */
+  --violet-300: #C4B5FD; --violet-400: #A78BFA;
+  --violet-500: #8B5CF6; --violet-600: #7C3AED;
+
+  /* Semantic */
+  --rose-300: #FDA4AF; --rose-400: #FB7185;
+  --rose-600: #BE123C; --rose-700: #9F1239;
+  --emerald-400: #34D399; --emerald-500: #10B981;
+}
+
+/* ---------- 1. CANVAS ---------- */
+html, body {
+  background:
+    radial-gradient(900px 620px at 8% -12%,  rgba(45,212,191,.10), transparent 62%),
+    radial-gradient(900px 700px at 96% 112%, rgba(139,92,246,.12), transparent 62%),
+    var(--ink-950) !important;
+  color: var(--tx-hi) !important;
+}
+
+header.bg-green-700 {
+  background: linear-gradient(100deg, #062B2A 0%, #0B4A45 42%, var(--teal-700) 100%) !important;
+  border-bottom: 1px solid rgba(94,234,212,.20) !important;
+  box-shadow: 0 20px 44px -28px rgba(20,184,166,.65) !important;
+}
+
+/* ---------- 2. SURFACES ---------- */
+.bg-white    { background-color: var(--ink-850) !important; }
+.bg-gray-50  { background-color: var(--ink-800) !important; }
+.bg-gray-100 { background-color: var(--ink-900) !important; }
+.bg-gray-200 { background-color: var(--ink-700) !important; }
+.bg-gray-300 { background-color: var(--ink-600) !important; }
+.bg-gray-800 { background-color: var(--ink-700) !important; border: 1px solid var(--ink-500) !important; }
+.bg-gray-900 { background-color: var(--ink-600) !important; }
+
+/* ---------- 3. TEXT ---------- */
+.text-gray-800 { color: var(--tx-hi)  !important; }
+.text-gray-700 { color: #D3DDEE      !important; }
+.text-gray-600 { color: var(--tx-mid) !important; }
+.text-gray-500 { color: var(--tx-lo)  !important; }
+
+/* ---------- 4. BORDERS ---------- */
+.border-gray-200 { border-color: var(--ink-600) !important; }
+.border-gray-300 { border-color: var(--ink-500) !important; }
+
+/* ---------- 5. TEAL FAMILY (brand / study / correct) ---------- */
+.bg-green-50   { background-color: rgba(20,184,166,.10) !important; }
+.bg-green-100  { background-color: rgba(20,184,166,.55) !important; }
+.bg-green-600  { background-color: var(--teal-700) !important; }
+.bg-green-700  { background-color: var(--teal-800) !important; }
+.bg-green-800  { background-color: var(--teal-800) !important; }
+.bg-green-900  { background-color: #0B3B3A !important; }
+
+.text-green-200 { color: var(--teal-300) !important; }
+.text-green-600 { color: var(--teal-400) !important; }
+.text-green-700 { color: var(--teal-300) !important; }
+.text-green-800 { color: var(--teal-300) !important; }
+
+.border-green-200 { border-color: rgba(20,184,166,.35) !important; }
+.border-green-300 { border-color: rgba(20,184,166,.50) !important; }
+
+/* ---------- 6. AMBER FAMILY (CTAs / current / insight) ---------- */
+.bg-blue-50  { background-color: rgba(251,191,36,.10) !important; }
+.bg-blue-100 { background-color: rgba(251,191,36,.55) !important; }
+.bg-blue-600 { background: linear-gradient(135deg, var(--amber-500), var(--amber-400)) !important; }
+.bg-blue-600, .bg-blue-600 * { color: var(--on-amber) !important; }
+.bg-blue-700 { background: var(--amber-600) !important; }
+
+.text-blue-600, .text-blue-700, .text-blue-800 { color: var(--amber-300) !important; }
+
+.border-blue-300 { border-color: rgba(251,191,36,.50) !important; }
+.border-blue-500 { border-color: var(--amber-400) !important; }
+.border-blue-600 { border-color: var(--amber-400) !important; }
+
+/* ---------- 7. VIOLET FAMILY (media / reference) ---------- */
+.bg-purple-100 { background-color: rgba(139,92,246,.16) !important; }
+.bg-purple-600 { background-color: var(--violet-600) !important; }
+.bg-purple-700 { background-color: #6D28D9 !important; }
+.text-purple-500, .text-purple-700 { color: var(--violet-400) !important; }
+.border-purple-300 { border-color: rgba(139,92,246,.50) !important; }
+
+/* ---------- 8. ROSE FAMILY (danger / incorrect) ---------- */
+.bg-red-50  { background-color: rgba(244,63,94,.10) !important; }
+.bg-red-100 { background-color: rgba(244,63,94,.55) !important; }
+.bg-red-600 { background-color: var(--rose-600) !important; }
+.bg-red-700 { background-color: var(--rose-700) !important; }
+.text-red-500, .text-red-600, .text-red-700, .text-red-800 { color: var(--rose-400) !important; }
+.border-red-200 { border-color: rgba(244,63,94,.35) !important; }
+.border-red-300 { border-color: rgba(244,63,94,.50) !important; }
+
+/* ---------- 9. WARNING ---------- */
+.bg-yellow-100  { background-color: rgba(251,191,36,.55) !important; }
+.text-yellow-800 { color: var(--amber-300) !important; }
+.border-yellow-300 { border-color: rgba(251,191,36,.50) !important; }
+
+/* ---------- 10. HOVER STATES ---------- */
+.hover\:bg-gray-200:hover  { background-color: var(--ink-700) !important; }
+.hover\:bg-gray-300:hover  { background-color: var(--ink-600) !important; }
+.hover\:bg-gray-900:hover  { background-color: var(--ink-600) !important; }
+.hover\:bg-green-200:hover { background-color: rgba(20,184,166,.26) !important; }
+.hover\:bg-green-700:hover { background-color: var(--teal-800) !important; }
+.hover\:bg-green-900:hover { background-color: #0B3B3A !important; }
+.hover\:bg-blue-100:hover  { background-color: rgba(251,191,36,.22) !important; }
+.hover\:bg-blue-200:hover  { background-color: rgba(251,191,36,.30) !important; }
+.hover\:bg-blue-700:hover  { background: var(--amber-600) !important; }
+.hover\:bg-purple-200:hover{ background-color: rgba(139,92,246,.28) !important; }
+.hover\:bg-purple-700:hover{ background-color: #6D28D9 !important; }
+.hover\:bg-red-700:hover   { background-color: var(--rose-700) !important; }
+
+.hover\:text-gray-700:hover  { color: var(--tx-hi) !important; }
+.hover\:text-gray-800:hover  { color: var(--tx-hi) !important; }
+.hover\:text-red-500:hover   { color: var(--rose-300) !important; }
+.hover\:text-blue-700:hover  { color: var(--amber-300) !important; }
+.hover\:text-purple-700:hover{ color: var(--violet-300) !important; }
+
+/* ---------- 11. FORM CONTROLS ---------- */
+input, select, textarea {
+  background-color: var(--ink-800) !important;
+  color: var(--tx-hi) !important;
+  border-color: var(--ink-500) !important;
+}
+input::placeholder, textarea::placeholder { color: var(--tx-lo) !important; }
+select option { background-color: var(--ink-800); color: var(--tx-hi); }
+input:focus, select:focus, textarea:focus {
+  outline: none !important;
+  border-color: var(--teal-400) !important;
+  box-shadow: 0 0 0 3px rgba(45,212,191,.22) !important;
+}
+input:disabled { opacity: .55; }
+
+.cbt-radio:checked + label {
+  background-color: rgba(251,191,36,.16) !important;
+  border-color: var(--amber-400) !important;
+  color: var(--amber-300) !important;
+}
+
+/* ---------- 12. STUDY-MODE FEEDBACK ---------- */
+.explanation-box {
+  background-color: rgba(251,191,36,.10) !important;
+  border-left-color: var(--amber-400) !important;
+  color: var(--tx-hi) !important;
+}
+
+.correct-option-highlight {
+  background-color: var(--emerald-500) !important;
+  border-color: #059669 !important;
+  color: #04211A !important;
+}
+.correct-option-highlight span { color: #04211A !important; }
+.correct-option-highlight span.bg-white {
+  background-color: #04211A !important;
+  color: #6EE7B7 !important;
+}
+.correct-option-highlight .correct-badge {
+  background-color: #04211A !important;
+  color: #6EE7B7 !important;
+}
+
+.wrong-answer-selected {
+  background-color: var(--rose-600) !important;
+  border-color: var(--rose-700) !important;
+  color: #FFFFFF !important;
+}
+.wrong-answer-selected::after { background-color: rgba(0,0,0,.28) !important; }
+
+.fill-correct-highlight {
+  background-color: var(--emerald-500) !important;
+  color: #04211A !important;
+  border-color: #059669 !important;
+}
+
+.study-option:hover:not(.correct-option-highlight):not(.wrong-answer-selected) {
+  background-color: rgba(255,255,255,.05) !important;
+}
+
+/* ---------- 13. NOTE CARDS ---------- */
+.note-card {
+  background: linear-gradient(135deg, #4C1D95 0%, var(--violet-600) 55%, var(--teal-600) 100%) !important;
+  box-shadow: 0 18px 40px -26px rgba(124,58,237,.85) !important;
+}
+.note-content {
+  background-color: var(--ink-800) !important;
+  border-left-color: var(--amber-400) !important;
+  color: var(--tx-hi) !important;
+}
+.topic-note-badge { background-color: var(--violet-600) !important; }
+
+/* ---------- 14. IMAGE VIEWER ---------- */
+.image-gallery { background-color: #04060D !important; }
+.image-toolbar {
+  background: linear-gradient(to bottom, var(--ink-800), var(--ink-700)) !important;
+  border-bottom-color: var(--ink-600) !important;
+}
+.image-item {
+  background-color: var(--ink-850) !important;
+  box-shadow: 0 6px 18px rgba(0,0,0,.55) !important;
+}
+.image-item .filename { color: var(--tx-lo) !important; }
+
+/* ---------- 15. FULLSCREEN EXPLANATION THEMES (specificity-boosted) ---------- */
+
+#fullscreen-explain-modal.open .modal-content {
+  background: var(--ink-850) !important;
+  color: var(--tx-hi) !important;
+}
+
+#fullscreen-explain-modal.open .theme-white {
+  background: var(--ink-850) !important;
+  color: var(--tx-hi) !important;
+}
+#fullscreen-explain-modal.open .theme-white h2 {
+  border-bottom-color: var(--teal-400) !important;
+}
+
+#fullscreen-explain-modal.open .theme-dark {
+  background: #03050A !important;
+  color: var(--tx-hi) !important;
+}
+#fullscreen-explain-modal.open .theme-dark h2 {
+  border-bottom-color: var(--violet-400) !important;
+}
+
+#fullscreen-explain-modal.open .theme-sepia {
+  background: #1A1410 !important;
+  color: #F3E9D2 !important;
+}
+#fullscreen-explain-modal.open .theme-sepia h2 {
+  border-bottom-color: var(--amber-400) !important;
+}
+
+/* Close / theme buttons — must also beat the .theme-dark and .theme-sepia variants */
+#fullscreen-explain-modal.open .close-btn,
+#fullscreen-explain-modal.open .theme-toggle-btn,
+#fullscreen-explain-modal.open .theme-white  .close-btn,
+#fullscreen-explain-modal.open .theme-white  .theme-toggle-btn,
+#fullscreen-explain-modal.open .theme-dark   .close-btn,
+#fullscreen-explain-modal.open .theme-dark   .theme-toggle-btn,
+#fullscreen-explain-modal.open .theme-sepia  .close-btn,
+#fullscreen-explain-modal.open .theme-sepia  .theme-toggle-btn {
+  background: var(--ink-700) !important;
+  color: var(--tx-hi) !important;
+}
+#fullscreen-explain-modal.open .close-btn:hover,
+#fullscreen-explain-modal.open .theme-toggle-btn:hover,
+#fullscreen-explain-modal.open .theme-white  .close-btn:hover,
+#fullscreen-explain-modal.open .theme-white  .theme-toggle-btn:hover,
+#fullscreen-explain-modal.open .theme-dark   .close-btn:hover,
+#fullscreen-explain-modal.open .theme-dark   .theme-toggle-btn:hover,
+#fullscreen-explain-modal.open .theme-sepia  .close-btn:hover,
+#fullscreen-explain-modal.open .theme-sepia  .theme-toggle-btn:hover {
+  background: var(--ink-600) !important;
+  color: var(--tx-hi) !important;
+}
+
+/* ---------- 16. BLINKING BUTTON (specificity-boosted) ---------- */
+
+body .blink-btn {
+  background: var(--amber-400) !important;
+  color: var(--on-amber) !important;
+  box-shadow: 0 6px 18px rgba(251, 191, 36, 0.35) !important;
+}
+body .blink-btn:hover {
+  background: var(--amber-300) !important;
+  box-shadow: 0 8px 22px rgba(251, 191, 36, 0.5) !important;
+}
+
+/* ---------- 17. SCROLLBARS ---------- */
+.question-grid::-webkit-scrollbar-track { background: var(--ink-800); }
+.question-grid::-webkit-scrollbar-thumb { background: var(--ink-500); border-radius: 3px; }
+
+/* Force main containers to not overflow the screen */
+#app-container {
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+}
+
+.flex-row, .flex {
+    min-width: 0 !important;
+}
+
+/* Fix mobile browser address bar overlap */
+html, body {
+    height: 100dvh !important;
+    min-height: 100dvh !important;
+}
+
+/* Ensure the main container scrolls nicely */
+#app-container {
+    height: calc(100dvh - 72px) !important; /* 72px is roughly the header height */
+    overflow-y: auto !important;
+}
+
