@@ -3,22 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>eduCBT Notes Studio</title>
+  <title>EduNotes Studio Builder</title>
   
+  <!-- Independent Tailwind Configuration -->
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       theme: {
         extend: {
           colors: {
-            bg: 'var(--bg)', surface: 'var(--surface)', surface2: 'var(--surface-2)',
+            canvas: 'var(--canvas)', surface: 'var(--surface)', surface2: 'var(--surface-2)',
             border: 'var(--border)', text: 'var(--text)', muted: 'var(--muted)',
             primary: 'var(--primary)', primaryHover: 'var(--primary-hover)', primarySoft: 'var(--primary-soft)',
             success: 'var(--success)', warning: 'var(--warning)', danger: 'var(--danger)'
           },
           fontFamily: {
             sans: ['Inter', 'system-ui', 'sans-serif'],
-            mono: ['JetBrains Mono', 'Monaco', 'Consolas', 'monospace'],
+            mono: ['JetBrains Mono', 'Consolas', 'monospace'],
             serif: ['Source Serif 4', 'Georgia', 'serif']
           }
         }
@@ -36,35 +37,34 @@
   <script defer src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   
   <style>
+    /* Independent, Standalone CSS for the Builder */
     :root {
-      --bg: #F6F8FB; --surface: #FFFFFF; --surface-2: #EEF2F8; --border: #DDE4EF;
-      --text: #0F1B2D; --muted: #5A6B85; --primary: #2563EB; --primary-hover: #1D4ED8;
-      --primary-soft: #E8EFFF; --success: #059669; --warning: #D97706; --danger: #DC2626;
+      --canvas: #F8FAFC; --surface: #FFFFFF; --surface-2: #F1F5F9; --border: #E2E8F0;
+      --text: #0F172A; --muted: #64748B; --primary: #4F46E5; --primary-hover: #4338CA;
+      --primary-soft: #EEF2FF; --success: #10B981; --warning: #F59E0B; --danger: #EF4444;
       color-scheme: light;
     }
     html.dark {
-      --bg: #0B1220; --surface: #111A2C; --surface-2: #17223A; --border: #22304D;
-      --text: #E6ECF7; --muted: #93A3BD; --primary: #60A5FA; --primary-hover: #93C5FD;
-      --primary-soft: #142A52; --success: #34D399; --warning: #FBBF24; --danger: #F87171;
+      --canvas: #090E17; --surface: #111827; --surface-2: #1F2937; --border: #374151;
+      --text: #F9FAFB; --muted: #9CA3AF; --primary: #6366F1; --primary-hover: #818CF8;
+      --primary-soft: #312E81; --success: #34D399; --warning: #FBBF24; --danger: #F87171;
       color-scheme: dark;
     }
     
-    body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
+    body { margin: 0; background: var(--canvas); color: var(--text); font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; overflow: hidden; }
     * { box-sizing: border-box; }
     
-    /* Scrollbars */
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
 
-    /* Custom Inputs & Buttons */
-    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 36px; padding: 0 16px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; font-weight: 500; background: var(--surface); color: var(--text); transition: all 140ms ease; cursor: pointer; }
-    .btn:hover { background: var(--surface-2); }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 38px; padding: 0 16px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; font-weight: 500; background: var(--surface); color: var(--text); transition: all 140ms ease; cursor: pointer; }
+    .btn:hover { background: var(--surface-2); border-color: var(--muted); }
     .btn:active { transform: scale(0.98); }
     .btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
     .btn-primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
-    html.dark .btn-primary { color: #0B1220; }
+    html.dark .btn-primary { color: #fff; }
     
     .input-base { width: 100%; background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-size: 14px; outline: none; transition: border-color 140ms, box-shadow 140ms; }
     .input-base:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
@@ -97,10 +97,10 @@
     .preview-body .quiz-option { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 8px; margin-top: 10px; font-size: 15px; background: var(--surface); }
     .preview-body .quiz-option.correct { border-color: var(--success); background: color-mix(in srgb, var(--success) 10%, var(--surface)); }
 
-    /* Custom Mobile Drawers */
-    .drawer { position: fixed; inset: 0; z-index: 50; display: flex; pointer-events: none; }
+    /* Mobile Drawers */
+    .drawer { position: fixed; inset: 0; z-index: 100; display: flex; pointer-events: none; }
     .drawer > div { pointer-events: auto; }
-    .drawer-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.4); opacity: 0; transition: opacity 0.3s; }
+    .drawer-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(2px); opacity: 0; transition: opacity 0.3s; }
     .drawer-panel { position: absolute; inset-y: 0; left: 0; width: 320px; background: var(--surface); transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; box-shadow: 10px 0 30px rgba(0,0,0,0.1); }
     
     .drawer.open { pointer-events: auto; }
@@ -108,7 +108,7 @@
     .drawer.open .drawer-panel { transform: translateX(0); }
 
     /* Full screen mobile preview */
-    .mobile-preview-overlay { position: fixed; inset: 0; z-index: 60; background: var(--surface); display: flex; flex-direction: column; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    .mobile-preview-overlay { position: fixed; inset: 0; z-index: 110; background: var(--surface); display: flex; flex-direction: column; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
     .mobile-preview-overlay.open { transform: translateY(0); }
   </style>
 </head>
@@ -116,7 +116,6 @@
 
   <!-- HEADER -->
   <header class="h-14 md:h-16 border-b border-border bg-surface flex items-center px-3 md:px-4 shrink-0 z-20">
-    <!-- Mobile Tree Toggle -->
     <button onclick="toggleDrawer()" class="md:hidden p-2 -ml-2 text-muted hover:text-text rounded-lg hover:bg-surface2 mr-2">
       <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
     </button>
@@ -125,10 +124,9 @@
     
     <div class="flex items-center gap-2 mr-4 md:mr-6">
       <span class="text-xl">📓</span>
-      <span class="font-bold text-base md:text-lg tracking-tight hidden sm:block">Notes Studio</span>
+      <span class="font-bold text-base md:text-lg tracking-tight hidden sm:block">Studio Builder</span>
     </div>
     
-    <!-- Subject Name Input -->
     <input id="subject-input" type="text" placeholder="Subject name…" class="bg-transparent text-sm md:text-base font-bold text-text border-b border-transparent focus:border-primary outline-none px-1 md:px-2 py-1 transition w-32 sm:w-48 md:w-64 placeholder-muted truncate">
 
     <div class="hidden md:flex items-center gap-1 ml-4">
@@ -173,7 +171,7 @@
     </aside>
 
     <!-- CENTER PANEL: EDITOR -->
-    <section class="flex-1 flex flex-col bg-surface md:bg-bg overflow-hidden min-w-0">
+    <section class="flex-1 flex flex-col bg-surface md:bg-canvas overflow-hidden min-w-0">
       <div id="editor-container" class="flex-1 overflow-y-auto flex flex-col w-full max-w-4xl mx-auto bg-surface md:border-x md:border-border shadow-sm"></div>
     </section>
 
@@ -239,7 +237,7 @@
     </div>
   </div>
 
-  <!-- MODALS (Import, Export, Publish, Confirm) -->
+  <!-- MODALS -->
   <div id="modal-import" class="fixed inset-0 z-[100] bg-black/50 backdrop-blur-sm hidden items-center justify-center p-4">
     <div class="bg-surface border border-border rounded-xl w-full max-w-xl p-5 md:p-6 shadow-2xl flex flex-col max-h-[90vh]">
       <div class="flex items-center justify-between pb-4 border-b border-border shrink-0">
@@ -318,7 +316,7 @@
           <span>Preview</span>
           <span id="export-stats" class="font-mono text-primary font-bold">0 KB</span>
         </div>
-        <pre id="export-preview" class="flex-1 p-4 font-mono text-[11px] md:text-[12px] text-text bg-bg overflow-auto whitespace-pre-wrap select-all min-h-[150px]"></pre>
+        <pre id="export-preview" class="flex-1 p-4 font-mono text-[11px] md:text-[12px] text-text bg-canvas overflow-auto whitespace-pre-wrap select-all min-h-[150px]"></pre>
       </div>
       <div class="flex justify-end gap-2 pt-4 border-t border-border shrink-0 mt-4">
         <button onclick="copyExport()" class="btn">Copy code</button>
