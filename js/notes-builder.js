@@ -1,448 +1,869 @@
-// ============================================================
-// EDU NOTES STUDIO BUILDER
-// Replicates the exact UI/UX of EduNotes Studio + GitHub Publish
-// ============================================================
-
 'use strict';
 
-const STORAGE_KEY = 'cbt_notes_builder_v4';
+const LS_STATE = 'cbt_notes_builder_v3';
+const LS_UNDO  = 'cbt_notes_builder_undo_v3';
 const LS_CREDS = 'cbt_notes_builder_creds';
 
-const $ = (selector, root = document) => root.querySelector(selector);
-const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
-const escapeNode = document.createElement('div');
-const e = value => { escapeNode.textContent = String(value ?? ''); return escapeNode.innerHTML; };
-const ea = value => e(value).replace(/"/g, '&#34;').replace(/'/g, '&#39;');
-const uid = prefix => prefix + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
-const slugify = text => String(text).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'section';
-
-// ICONS (Pulled from edunotes.js)
-const iconPaths = {
-  book:'<path d="M12 5.5C8.5 3.4 5 3.4 2.5 4.5v14C5 17.4 8.5 17.4 12 19.5c3.5-2.1 7-2.1 9.5-1v-14C19 3.4 15.5 3.4 12 5.5Z"/><path d="M12 5.5v14M6 8l3 .5M6 11l3 .5M15 8.5l3-.5M15 11.5l3-.5"/>',
-  library:'<rect x="3.5" y="3.5" width="6.5" height="6.5" rx="1.5"/><rect x="14" y="3.5" width="6.5" height="6.5" rx="1.5"/><rect x="3.5" y="14" width="6.5" height="6.5" rx="1.5"/><rect x="14" y="14" width="6.5" height="6.5" rx="1.5"/>',
-  arrowLeft:'<path d="M20 12H5m5-5-5 5 5 5"/>',
-  arrow:'<path d="M4 12h15m-5-5 5 5-5 5"/>',
-  chevron:'<path d="m9 5 7 7-7 7"/>',
-  down:'<path d="m6 9 6 6 6-6"/>',
-  up:'<path d="m6 15 6-6 6 6"/>',
-  close:'<path d="m6 6 12 12M6 18 18 6"/>',
-  check:'<path d="m5 12 4 4L19 6"/>',
-  checkCircle:'<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>',
-  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
-  moon:'<path d="M20.5 13.5A8.5 8.5 0 0 1 10.5 3 9 9 0 1 0 20.5 13.5Z"/>',
-  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/>',
-  leaf:'<path d="M20 3C8 2 3 7 5 14c2 7 15 6 15-11Z"/><path d="M4 21 16 8M8 13h5m-2-3v5"/>',
-  menu:'<path d="M4 6h16M4 12h16M4 18h16"/>',
-  edit:'<path d="m15 4 5 5M4 20l5-1L21 7a2.1 2.1 0 0 0-5-5L4 15l-1 6 6-2"/>',
-  cloud:'<path d="M6.5 18H6a4 4 0 0 1-.8-7.9 7 7 0 0 1 13.3-1.6A4.8 4.8 0 0 1 18.5 18H17"/><path d="m9 16 3 3 5-5"/>',
-  plus:'<path d="M12 5v14M5 12h14"/>',
-  upload:'<path d="M12 16V3m-5 5 5-5 5 5M4 15v5h16v-5"/>',
-  download:'<path d="M12 3v13m-5-5 5 5 5-5M4 17v4h16v-4"/>',
-  eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>',
-  link:'<path d="m9 15 6-6M9 7l3-3a5 5 0 0 1 7 7l-3 3M15 17l-3 3a5 5 0 0 1-7-7l3-3"/>',
-  list:'<path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/>',
-  tasks:'<path d="m3 6 2 2 3-4m-5 9 2 2 3-4m-5 9 2 2 3-4M11 6h10M11 13h10M11 20h10"/>',
-  brackets:'<path d="m8 6-6 6 6 6m8-12 6 6-6 6m-3-15-2 18"/>',
-  sigma:'<path d="M19 4H5l8 8-8 8h14"/>',
-  quiz:'<circle cx="12" cy="12" r="9"/><path d="M9.2 8.5a3 3 0 0 1 5.7 1.2c0 2-3 2-3 4m0 3h.01"/>',
-  info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10h.01"/>',
-  warning:'<path d="M10.3 4.3 2.5 18a2 2 0 0 0 1.7 3h15.6a2 2 0 0 0 1.7-3L13.7 4.3a2 2 0 0 0-3.4 0Z"/><path d="M12 9v5m0 3h.01"/>',
-  bulb:'<path d="M8 16a7 7 0 1 1 8 0l-1 3H9l-1-3Zm1 6h6M12 7v5"/>',
-  grip:'<path d="M9 5h.01M15 5h.01M9 12h.01M15 12h.01M9 19h.01M15 19h.01" stroke-width="3"/>',
-  video:'<rect x="2" y="5" width="14" height="14" rx="2"/><path d="m16 10 6-4v12l-6-4"/>',
-  steps:'<path d="M3 18h6v-6h6V6h6M3 21h18"/>',
-  send:'<path d="m22 2-7 20-4-9L2 9 22 2ZM11 13 22 2"/>'
+const state = {
+  subject: 'Untitled Subject',
+  description: '',
+  topics: [],
+  selected: { topicIdx: 0, lessonIdx: null, subject: false },
+  dirty: false,
+  darkMode: false
 };
-const icon = (name, cls = '') => `<svg class="icon ${cls}" viewBox="0 0 24 24" aria-hidden="true">${iconPaths[name] || iconPaths.book}</svg>`;
-const brand = (compact = false) => `<span class="brand-mark">${icon('book')}</span>${compact ? '' : '<span class="brand-name">Edu<span>Notes</span></span>'}`;
 
-// STATE
-let state = {
-  courses: [],
-  progress: {}, bookmarks: {}, myNotes: {},
-  ui: { theme: 'system', role: 'studio', studioSplit: .51, device: 'mobile' }
-};
-const runtime = { treeOpen:{}, previewReady:false, activeLesson:null, saveTimer:null, previewTimer:null, quizRegistry:{} };
+const undo = { stack: [], redo: [] };
+const MAX_UNDO = 50;
+let saveTimer = null;
+let previewTimer = null;
+let pendingImport = null;
 
-// FORMATTERS & PARSERS (Pulled from edunotes.js)
-function parseFrontmatter(raw) {
-  const normalized = String(raw || '').replace(/\r\n/g, '\n');
-  const match = normalized.match(/^\uFEFF?---[ \t]*\n([\s\S]*?)\n---[ \t]*(?:\n|$)/);
-  if (!match) return { meta: {}, content: normalized };
-  const meta = {};
-  let listKey = null;
-  for (const line of match[1].split('\n')) {
-    const field = line.match(/^([\w-]+):\s*(.*)$/);
-    if (field) {
-      const key = field[1];
-      let value = field[2].trim();
-      if (value.startsWith('[') && value.endsWith(']')) {
-        try { value = JSON.parse(value); } catch { value = value.slice(1, -1).split(',').map(x => x.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean); }
-      } else if (value.startsWith('"')) {
-        try { value = JSON.parse(value); } catch { value = value.replace(/^"|"$/g, ''); }
-      } else { value = value.replace(/^'|'$/g, ''); }
-      meta[key] = value;
-      listKey = value === '' ? key : null;
-    } else if (listKey && /^\s+-\s/.test(line)) {
-      if (!Array.isArray(meta[listKey])) meta[listKey] = [];
-      meta[listKey].push(line.replace(/^\s+-\s*/, '').replace(/^['"]|['"]$/g, ''));
-    }
-  }
-  return { meta, content: normalized.slice(match[0].length).replace(/^\n/, '') };
-}
-
-function serializeLesson(meta, content) {
-  const fields = Object.entries(meta).map(([key, value]) => {
-    const output = Array.isArray(value) ? JSON.stringify(value) : (/[\n:#"']/.test(String(value)) ? JSON.stringify(String(value)) : String(value));
-    return `${key}: ${output}`;
-  });
-  return `---\n${fields.join('\n')}\n---\n\n${content}`;
-}
-
-const allLessons = () => state.courses.flatMap(course => [...(course.chapters || [])].sort((a,b)=>a.order-b.order).flatMap(chapter => [...(chapter.lessons || [])].sort((a,b)=>a.order-b.order).map(lesson => ({course,chapter,lesson}))));
-const findLesson = id => allLessons().find(x => x.lesson.id === id);
-const findChapter = id => state.courses.flatMap(course => course.chapters.map(chapter => ({course,chapter}))).find(x => x.chapter.id === id);
-const lessonTitle = (lesson,preview=false) => parseFrontmatter(preview ? lesson.body : (lesson.publishedBody||lesson.body)).meta.title || lesson.title || 'Untitled lesson';
-const lessonMeta = (lesson,preview=false) => ({...lesson.frontmatter,...parseFrontmatter(preview ? lesson.body : (lesson.publishedBody||lesson.body)).meta});
-const isDark = () => state.ui.theme === 'dark' || (state.ui.theme === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
-const wordCount = text => parseFrontmatter(text).content.replace(/```[\s\S]*?```/g, ' ').replace(/[#*_`$|>]/g,' ').trim().split(/\s+/).filter(Boolean).length;
-const blockCount = text => (parseFrontmatter(text).content.match(/^```\w*/gm) || []).length / 2;
-const currentStudio = () => findLesson(runtime.activeLesson);
-
-// INIT
+/* ============================================================
+   INIT
+   ============================================================ */
 document.addEventListener('DOMContentLoaded', init);
 
 function init() {
-  // Load from local storage
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (saved) {
-    try { state = JSON.parse(saved); } catch {}
+  loadState();
+  restoreUndo();
+  if (!state.topics.length) {
+    state.topics.push({ name: 'Introduction', lessons: [] });
+    state.selected = { topicIdx: 0, lessonIdx: null, subject: false };
   }
-  // If empty, create a blank starter subject
-  if (!state.courses || !state.courses.length) {
-    const now = new Date().toISOString();
-    const meta = { title:'Welcome to Studio', subject:'general', grade:8, difficulty:'Easy', duration:5, tags:[], prerequisites:[] };
-    state.courses = [{
-      id:'general', subject:'general', title:'General', color:'#2563EB', icon:'book', description:'',
-      chapters:[{
-        id:'chapter-1', title:'Getting Started', order:0,
-        lessons:[{ id:'lesson-1', title:meta.title, order:0, status:'draft', frontmatter:meta, body:serializeLesson(meta,'# Welcome to your new Studio!\n\nStart writing here.'), publishedBody:null, version:0, createdAt:now, updatedAt:now }]
-      }]
-    }];
-    runtime.activeLesson = 'lesson-1';
-  } else if (!runtime.activeLesson) {
-    runtime.activeLesson = allLessons()[0]?.lesson.id;
-  }
+  
+  if (state.darkMode) document.documentElement.classList.add('dark');
+  
+  bindHeader();
+  bindShortcuts();
+  bindImportTabs();
+  
+  // Render both trees
+  renderAll();
+}
 
-  bindEvents();
-  applyTheme();
-  renderApp();
+/* ============================================================
+   STATE PERSISTENCE
+   ============================================================ */
+function loadState() {
+  try {
+    const raw = localStorage.getItem(LS_STATE);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (parsed && Array.isArray(parsed.topics)) {
+      state.subject = parsed.subject || 'Untitled Subject';
+      state.description = parsed.description || '';
+      state.topics = parsed.topics;
+      state.selected = parsed.selected || { topicIdx: 0, lessonIdx: null, subject: false };
+      state.darkMode = parsed.darkMode || false;
+    }
+  } catch (e) { console.warn('loadState failed', e); }
+}
+
+function restoreUndo() {
+  try {
+    const raw = localStorage.getItem(LS_UNDO);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (parsed) {
+      undo.stack = (parsed.stack || []).slice(-10);
+      undo.redo = [];
+    }
+  } catch {}
 }
 
 function persist() {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    const status = $('#studio-save-status');
-    if (status) status.innerHTML = `${icon('cloud')} Saved <span class="save-time">${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}</span>`;
-  } catch {}
+    localStorage.setItem(LS_STATE, JSON.stringify({
+      subject: state.subject,
+      description: state.description,
+      topics: state.topics,
+      selected: state.selected,
+      darkMode: state.darkMode
+    }));
+    localStorage.setItem(LS_UNDO, JSON.stringify({ stack: undo.stack.slice(-10) }));
+    flashSaved('Saved');
+    const status = document.getElementById('save-status');
+    if (status) status.textContent = 'Saved ' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+  } catch (e) {
+    flashSaved('Storage unavailable', true);
+    const status = document.getElementById('save-status');
+    if (status) status.textContent = 'Not saved: storage unavailable';
+  }
 }
 
 function scheduleSave() {
-  clearTimeout(runtime.saveTimer);
-  runtime.saveTimer = setTimeout(() => persist(), 500);
+  state.dirty = true;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => { persist(); state.dirty = false; }, 400);
 }
 
-function applyTheme() {
-  document.documentElement.dataset.theme = isDark() ? 'dark' : 'light';
-}
-
-// RENDER CORE
-function renderApp() {
-  const found = currentStudio();
-  if(found) {
-    runtime.treeOpen[found.course.id] = true;
-    runtime.treeOpen[found.chapter.id] = true;
-  }
-  document.body.className = 'studio-active';
-  $('#app').innerHTML = studioHTML(found?.lesson);
-  initializeStudio(found?.lesson);
-}
-
-function studioStatus(lesson) {
-  if (!lesson) return {label:'No lesson selected',published:false};
-  if (lesson.status==='draft') return {label:'Draft',published:false};
-  if (lesson.body!==lesson.publishedBody) return {label:'Unpublished changes',published:false};
-  return {label:'Published v'+(lesson.version||1),published:true};
-}
-
-function metadataChips(lesson,course) {
-  const meta=lessonMeta(lesson,true);
-  const tags=Array.isArray(meta.tags)?meta.tags:String(meta.tags||'').split(',').filter(Boolean);
-  return `<button class="meta-chip subject-chip subject-${ea(course.subject)}" data-action="edit-meta" data-key="subject" aria-label="Edit subject">${icon(course.icon||'book')} ${e(course.title)}</button>
-    <button class="meta-chip" data-action="edit-meta" data-key="grade" aria-label="Edit grade">Grade ${e(meta.grade||8)}</button>
-    <button class="meta-chip" data-action="edit-meta" data-key="difficulty" aria-label="Edit difficulty">${icon('leaf')} ${e(meta.difficulty||'Easy')}</button>
-    <button class="meta-chip" data-action="edit-meta" data-key="duration" aria-label="Edit reading duration">${icon('clock')} ${e(meta.duration||5)} min</button>`;
-}
-
-function courseTreeHTML() {
-  const selected=currentStudio();
-  return state.courses.map(course=>{
-    const open=runtime.treeOpen[course.id] ?? selected?.course.id===course.id;
-    return `<div class="tree-course subject-${ea(course.subject)}"><button class="tree-course-toggle" data-action="tree-course" data-course="${ea(course.id)}" aria-expanded="${open}">${icon(open?'down':'chevron')}${icon(course.icon||'book')}<span>${e(course.title)}</span></button><div ${open?'':'hidden'}>
-      ${[...course.chapters].sort((a,b)=>a.order-b.order).map(chapter=>{
-        const chapterOpen=runtime.treeOpen[chapter.id] ?? selected?.chapter.id===chapter.id;
-        return `<div class="tree-chapter"><div class="tree-chapter-heading"><button class="tree-chapter-toggle" data-action="tree-chapter" data-chapter="${ea(chapter.id)}" aria-expanded="${chapterOpen}">${icon(chapterOpen?'down':'chevron')}<span>${e(chapter.title)}</span></button></div>
-          <div ${chapterOpen?'':'hidden'}>${[...chapter.lessons].sort((a,b)=>a.order-b.order).map(lesson=>`<div class="tree-lesson ${lesson.id===runtime.activeLesson?'active':''}" data-lesson="${ea(lesson.id)}" data-chapter="${ea(chapter.id)}"><button class="drag-handle" draggable="true" data-action="lesson-menu" data-lesson="${ea(lesson.id)}">${icon('grip')}</button><button class="tree-lesson-link" data-action="route" data-route="#/studio/${ea(lesson.id)}" ${lesson.id===runtime.activeLesson?'aria-current="page"':''}><span class="status-dot ${lesson.status==='draft'||lesson.body!==lesson.publishedBody?'draft':''}"></span><span>${e(lessonTitle(lesson,true))}</span></button></div>`).join('')}<button class="tree-new-lesson" data-action="new-lesson" data-chapter="${ea(chapter.id)}">${icon('plus','sm')} Add lesson</button></div>
-        </div>`;
-      }).join('')}
-    </div></div>`;
-  }).join('');
-}
-
-function studioHTML(lesson) {
-  const found=lesson?findLesson(lesson.id):null;
-  const status=studioStatus(lesson);
-  const device=state.ui.device||'mobile';
-  
-  return `<div class="studio-shell">
-    <header class="studio-topbar">
-      <a href="index.html" class="studio-library" style="text-decoration:none; color:inherit;">
-        ${icon('arrowLeft','sm')}${brand(true)}<span>Exit to CBT</span>
-      </a>
-      <span class="topbar-divider"></span>
-      <span class="studio-chapter-label" id="studio-chapter-label">Chapter: <strong>${e(found?.chapter.title || 'None')}</strong></span>
-      ${lesson?`<button class="studio-status ${status.published?'published':''}" id="studio-status" data-action="status-menu"><span class="status-dot"></span><span>${e(status.label)}</span>${icon('down','sm')}</button>`:''}
-      
-      <div class="studio-topbar-actions">
-        <!-- REPLACED WITH BUILDER ACTIONS -->
-        <button class="btn" data-action="import">${icon('upload','sm')} Import</button>
-        <button class="btn" data-action="export">${icon('download','sm')} Export</button>
-        <button class="btn" data-action="toggle-preview">${icon('eye','sm')} Preview</button>
-        <button class="btn btn-primary" data-action="publish">${icon('send','sm')} Publish</button>
-        
-        <button class="icon-btn" data-action="theme" style="margin-left: 10px;">${icon(isDark()?'sun':'moon')}</button>
-      </div>
-    </header>
-    
-    <div class="studio-main">
-      <aside class="studio-tree" id="studio-tree">
-        <div class="tree-heading"><h2 class="eyebrow">COURSE OUTLINE</h2><button class="icon-btn" data-action="new-subject">${icon('plus','sm')}</button></div>
-        <div class="tree-scroll" id="course-tree-content">${courseTreeHTML()}</div>
-      </aside>
-      
-      <div class="studio-workspace" id="studio-workspace" style="--studio-split:${Number(state.ui.studioSplit)||.51}">
-        ${lesson?`
-        <section class="editor-pane" aria-label="Lesson editor">
-          <div class="editor-heading">
-            <div class="editor-heading-label"><span class="eyebrow">LESSON EDITOR</span></div>
-            <input class="lesson-title-input" id="lesson-title-input" type="text" value="${ea(lessonTitle(lesson,true))}" placeholder="Lesson Title">
-            <div class="metadata-chips" id="metadata-chips">${metadataChips(lesson,found.course)}</div>
-          </div>
-          
-          <div class="editor-toolbar">
-            <button data-format="bold"><strong>B</strong></button>
-            <button data-format="italic"><em>I</em></button>
-            <span class="toolbar-separator"></span>
-            <button data-format="h1">H1</button>
-            <button data-format="h2">H2</button>
-            <span class="toolbar-separator"></span>
-            <button data-format="link">${icon('link')}</button>
-            <button data-format="list">${icon('list')}</button>
-            <button data-format="code">${icon('brackets')}</button>
-            <span class="toolbar-separator"></span>
-            <button data-format="math">${icon('sigma')}</button>
-            <button data-format="quiz">${icon('quiz')}</button>
-            <button data-format="callout">${icon('info')}</button>
-          </div>
-          
-          <textarea class="editor-textarea" id="markdown-editor" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" placeholder="Write your lesson here..."></textarea>
-        </section>
-        
-        <div class="split-handle" id="split-handle" role="separator"></div>
-        
-        <section class="preview-pane" aria-label="Live student page preview">
-          <div class="preview-toolbar">
-            <span class="preview-label"><span class="status-dot"></span> LIVE PREVIEW</span>
-          </div>
-          <div class="preview-viewport">
-            <div class="device-frame" id="device-frame" data-device="${device}">
-              <div class="device-chrome"><i></i><i></i><i></i><span>edunotes / your lesson</span></div>
-              <iframe id="preview-frame" title="Exact student-facing lesson preview"></iframe>
-            </div>
-          </div>
-        </section>
-        `:`<div class="empty-state" style="flex:1"><h2>No lesson selected</h2></div>`}
-      </div>
-    </div>
-    
-    <div class="validation-bar" id="validation-bar">${icon('checkCircle')} Ready</div>
-    <footer class="studio-footer">
-      <span class="studio-wordcount" id="studio-wordcount">${lesson?wordCount(lesson.body):0} words</span>
-      <span class="studio-save-status" id="studio-save-status">${icon('cloud')} Saved locally</span>
-    </footer>
-  </div>`;
-}
-
-// STUDIO ENGINE
-function initializeStudio(lesson) {
-  if (!lesson) return;
-  const editor=$('#markdown-editor');
-  editor.value=lesson.body;
-  editor.addEventListener('input',()=>updateStudioFromRaw(editor.value));
-  
-  $('#lesson-title-input').addEventListener('input',event=>{
-    const parsed=parseFrontmatter(editor.value);
-    parsed.meta.title=event.target.value;
-    editor.value=serializeLesson(parsed.meta,parsed.content);
-    updateStudioFromRaw(editor.value);
-  });
-
-  const frame=$('#preview-frame');
-  runtime.previewReady=false;
-  frame.addEventListener('load',()=>{runtime.previewReady=true;renderPreview();});
-  
-  // Inject the exact CSS into the iframe
-  const cssText = document.querySelector('link[href="css/edunotes.css"]') ? `@import url('css/edunotes.css');` : '';
-  const fonts=$('link[href*="fonts.googleapis.com/css2"]')?.outerHTML || '';
-  const mathStyle=$('link[href*="katex.min.css"]')?.outerHTML || '';
-  
-  frame.srcdoc=`<!DOCTYPE html><html lang="en" data-theme="${isDark()?'dark':'light'}"><head><meta charset="UTF-8"><title>Preview</title>${fonts}${mathStyle}<style>${cssText}</style></head><body class="preview-document"><main id="preview-root"></main></body></html>`;
-  
-  $('#split-handle')?.addEventListener('pointerdown',beginResize);
-  updateValidation();
-  renderPreview();
-}
-
-function renderPreview() {
-  const frame=$('#preview-frame');
-  const found=currentStudio();
-  if (!frame || !found || !runtime.previewReady) return;
-  const root=frame.contentDocument?.getElementById('preview-root');
-  if (!root) return;
-  
-  // Use a simplified renderer for the iframe
-  const html = `<div class="reader-page">
-    <header class="lesson-header"><h1>${e(lessonTitle(found.lesson,true))}</h1></header>
-    <div class="lesson-body">${renderMarkdown(found.lesson.body)}</div>
-  </div>`;
-  
-  root.innerHTML = html;
-  
-  // Render math inside iframe
-  if(frame.contentWindow.katex) {
-    root.querySelectorAll('[data-latex]').forEach(node => {
-      try { frame.contentWindow.katex.render(node.dataset.latex, node, { displayMode: node.dataset.display === 'true', throwOnError: false }); } catch {}
-    });
-  }
-}
-
-function updateStudioFromRaw(raw) {
-  const found=currentStudio();
-  if(!found) return;
-  const lesson=found.lesson;
-  lesson.body=raw;
-  const parsed=parseFrontmatter(raw);
-  lesson.title=parsed.meta.title || 'Untitled lesson';
-  lesson.frontmatter={...lesson.frontmatter,...parsed.meta};
-  lesson.updatedAt=new Date().toISOString();
-  
-  renderCourseTree(); // refresh tree title
-  
-  clearTimeout(runtime.previewTimer);
-  runtime.previewTimer = setTimeout(() => {
-    renderPreview();
-    updateValidation();
-  }, 400);
-  
-  const count=$('#studio-wordcount');
-  if(count) count.innerHTML=`${wordCount(lesson.body)} words &middot; ${Math.floor(blockCount(lesson.body))} blocks`;
-  
-  scheduleSave();
-}
-
-function renderCourseTree() {
-  const tree=$('#course-tree-content');
-  if(tree) tree.innerHTML=courseTreeHTML();
-}
-
-function updateValidation() {
-  const lesson=currentStudio()?.lesson;
-  const bar=$('#validation-bar');
-  if(!lesson || !bar) return;
-  const issues=[];
-  const fences=(lesson.body.match(/^```/gm) || []).length;
-  if (fences%2!==0) issues.push('Unbalanced code fences');
-  
-  if(issues.length) {
-    bar.innerHTML=`${icon('warning')} ${issues.length} issue(s) found`;
-    bar.style.color='var(--warning-ink)';
-  } else {
-    bar.innerHTML=`${icon('checkCircle')} All checks passed`;
-    bar.style.color='var(--muted)';
-  }
-}
-
-// SIMPLIFIED MARKDOWN RENDERER (For iframe)
-function renderMarkdown(source) {
-  if (!source) return '<p class="text-lo italic">No content yet.</p>';
-  let prepared = String(source).replace(/^```(quiz|callout|math|steps|video)[ \t]*\n([\s\S]*?)^```[ \t]*(?:\n|$)/gmi, (_, type, raw) => {
-     return `\n\n<div class="custom-block">${raw}</div>\n\n`;
-  });
-  
-  let html = '';
-  if (window.marked) {
-    html = marked.parse(parseFrontmatter(prepared).content, { gfm: true });
-  } else {
-    html = prepared.split(/\n\n+/).map(p => `<p>${e(p)}</p>`).join('');
-  }
-  
-  const container = document.createElement('div');
-  container.innerHTML = html;
-  
-  container.querySelectorAll('p, li, td, th, span, strong, em').forEach(el => {
-    el.innerHTML = el.innerHTML.replace(/\$\$([^$]+?)\$\$/g, (_, m) => `<span class="math-display" data-latex="${ea(m)}" data-display="true"></span>`)
-                               .replace(/\$([^\n$]+?)\$/g, (_, m) => `<span class="math-inline" data-latex="${ea(m)}" data-display="false"></span>`);
-  });
-  
-  return container.innerHTML;
-}
-
-function beginResize(event) {
-  if (event.button!==0) return;
-  event.preventDefault();
-  const handle=event.currentTarget;
-  handle.classList.add('dragging');
-  $('#preview-frame').style.pointerEvents='none';
-  document.body.style.cursor='col-resize';
-  const move=moveEvent=>{
-    const rect=$('#studio-workspace').getBoundingClientRect();
-    const val = Math.max(.3, Math.min(.7, (moveEvent.clientX-rect.left)/rect.width));
-    $('#studio-workspace').style.setProperty('--studio-split', String(val));
-    state.ui.studioSplit = val;
-  };
-  const end=()=>{
-    handle.classList.remove('dragging');
-    if($('#preview-frame')) $('#preview-frame').style.pointerEvents='';
-    document.body.style.cursor='';
-    window.removeEventListener('pointermove',move);
-    window.removeEventListener('pointerup',end);
-    window.removeEventListener('pointercancel',end);
-    scheduleSave();
-  };
-  window.addEventListener('pointermove',move);
-  window.addEventListener('pointerup',end);
-  window.addEventListener('pointercancel',end);
+function flashSaved(text, isError = false) {
+  const el = document.getElementById('save-indicator');
+  if (!el) return;
+  el.textContent = '💾 ' + text;
+  el.className = 'text-[10px] md:text-xs font-medium ml-2 transition-opacity whitespace-nowrap ' + (isError ? 'text-danger' : 'text-success');
+  el.style.opacity = '1';
+  setTimeout(() => { el.style.opacity = '0'; }, 1500);
 }
 
 /* ============================================================
-   GITHUB PUBLISHING & EXPORTING (The Builder Feature)
+   UNDO / REDO
+   ============================================================ */
+function snapshot() {
+  try {
+    const copy = JSON.stringify({
+      subject: state.subject,
+      description: state.description,
+      topics: state.topics,
+      selected: state.selected
+    });
+    const last = undo.stack[undo.stack.length - 1];
+    if (last === copy) return;
+    undo.stack.push(copy);
+    if (undo.stack.length > MAX_UNDO) undo.stack.shift();
+    undo.redo = [];
+    updateUndoButtons();
+  } catch {}
+}
+
+function applySnapshot(json) {
+  try {
+    const obj = JSON.parse(json);
+    state.subject = obj.subject;
+    state.description = obj.description;
+    state.topics = obj.topics;
+    state.selected = obj.selected;
+    renderAll();
+    persist();
+  } catch (e) { console.warn(e); }
+}
+
+function doUndo() {
+  if (undo.stack.length < 2) return;
+  const current = undo.stack.pop();
+  undo.redo.push(current);
+  applySnapshot(undo.stack[undo.stack.length - 1]);
+  updateUndoButtons();
+}
+
+function doRedo() {
+  if (!undo.redo.length) return;
+  const next = undo.redo.pop();
+  undo.stack.push(next);
+  applySnapshot(next);
+  updateUndoButtons();
+}
+
+function updateUndoButtons() {
+  const u = document.getElementById('btn-undo');
+  const r = document.getElementById('btn-redo');
+  if (u) u.disabled = undo.stack.length < 2;
+  if (r) r.disabled = !undo.redo.length;
+}
+
+function toggleDarkMode() {
+  state.darkMode = !state.darkMode;
+  document.documentElement.classList.toggle('dark', state.darkMode);
+  scheduleSave();
+}
+
+/* ============================================================
+   HEADER & DRAWERS
+   ============================================================ */
+function bindHeader() {
+  const subjectInput = document.getElementById('subject-input');
+  if (subjectInput) {
+    subjectInput.value = state.subject;
+    subjectInput.addEventListener('input', e => {
+      snapshot();
+      state.subject = e.target.value;
+      scheduleSave();
+    });
+  }
+  document.getElementById('btn-undo').onclick = doUndo;
+  document.getElementById('btn-redo').onclick = doRedo;
+  
+  const searchDesc = document.getElementById('tree-search-desktop');
+  if (searchDesc) searchDesc.addEventListener('input', () => { renderDesktopTree(); renderMobileTree(); });
+}
+
+function toggleDrawer() {
+  const drawer = document.getElementById('mobile-drawer');
+  drawer.classList.toggle('open');
+  if (drawer.classList.contains('open')) renderMobileTree();
+}
+
+function toggleMobilePreview() {
+  const overlay = document.getElementById('mobile-preview');
+  overlay.classList.toggle('open');
+  if (overlay.classList.contains('open')) {
+    renderDesktopPreview(); // Ensure content is up to date
+    const content = document.getElementById('mobile-preview-content');
+    content.innerHTML = document.getElementById('desktop-preview-content').innerHTML;
+    hydrateMath(content);
+  }
+}
+
+function bindShortcuts() {
+  document.addEventListener('keydown', e => {
+    const cmd = e.ctrlKey || e.metaKey;
+    const key = e.key.toLowerCase();
+    if (cmd && key === 's') { e.preventDefault(); persist(); return; }
+    if (cmd && e.key === 'Enter') { e.preventDefault(); openPublishModal(); return; }
+    if (cmd && key === 'z' && !e.shiftKey) { e.preventDefault(); doUndo(); return; }
+    if (cmd && key === 'z' && e.shiftKey) { e.preventDefault(); doRedo(); return; }
+    if (cmd && key === 'y') { e.preventDefault(); doRedo(); return; }
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.fixed.inset-0:not(.hidden)').forEach(m => {
+        m.classList.add('hidden');
+        m.classList.remove('flex');
+      });
+      const drawer = document.getElementById('mobile-drawer');
+      if (drawer.classList.contains('open')) toggleDrawer();
+      const overlay = document.getElementById('mobile-preview');
+      if (overlay.classList.contains('open')) toggleMobilePreview();
+    }
+  });
+}
+
+/* ============================================================
+   TREES
+   ============================================================ */
+function renderDesktopTree() {
+  const container = document.getElementById('desktop-tree-scroll');
+  if (!container) return;
+  renderTreeInto(container, 'desktop');
+}
+
+function renderMobileTree() {
+  const container = document.getElementById('mobile-tree-scroll');
+  if (!container) return;
+  renderTreeInto(container, 'mobile');
+}
+
+function renderTreeInto(container, mode) {
+  const queryInput = document.getElementById('tree-search-desktop');
+  const query = (queryInput?.value || '').toLowerCase().trim();
+  container.innerHTML = '';
+
+  if (!state.topics.length) {
+    container.innerHTML = '<div class="text-center text-muted text-sm py-8 px-2">No topics yet. Click "+ New Topic" to start.</div>';
+    return;
+  }
+
+  state.topics.forEach((topic, ti) => {
+    const topicMatches = !query || topic.name.toLowerCase().includes(query);
+    const matchingLessons = topic.lessons.map((l, li) => ({ l, li })).filter(({ l }) =>
+      !query || l.title.toLowerCase().includes(query) || (l.body || '').toLowerCase().includes(query)
+    );
+    if (query && !topicMatches && matchingLessons.length === 0) return;
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'mb-2';
+
+    // Topic Row
+    const row = document.createElement('div');
+    const isTopicSel = state.selected.topicIdx === ti && state.selected.lessonIdx === null;
+    row.className = 'flex items-center justify-between px-3 py-2 rounded-lg text-sm cursor-pointer transition ' +
+      (isTopicSel ? 'bg-primarySoft text-primary font-semibold border border-primary/20' : 'text-text hover:bg-surface2 font-medium');
+    
+    row.innerHTML = `<span class="truncate flex-1">📂 ${escapeHtml(topic.name)}</span>
+      <span class="text-xs text-muted font-mono bg-surface2 px-2 py-0.5 rounded-full border border-border">${topic.lessons.length}</span>`;
+    row.onclick = () => {
+      state.selected = { topicIdx: ti, lessonIdx: null, subject: false };
+      renderAll();
+      if (mode === 'mobile') toggleDrawer();
+    };
+    wrapper.appendChild(row);
+
+    // Lessons
+    const lessonWrap = document.createElement('div');
+    lessonWrap.className = 'ml-4 pl-3 border-l border-border space-y-1 mt-1';
+
+    (query ? matchingLessons : topic.lessons.map((l, li) => ({ l, li }))).forEach(({ l, li }) => {
+      const isSel = state.selected.topicIdx === ti && state.selected.lessonIdx === li;
+      const lRow = document.createElement('div');
+      lRow.className = 'flex items-center gap-2 px-2 py-2 rounded-md text-sm cursor-pointer transition ' +
+        (isSel ? 'bg-primarySoft text-primary font-semibold' : 'text-muted hover:bg-surface2 hover:text-text');
+      
+      const status = !l.body?.trim() ? 'bg-warning' : (validateLessonText(l.body).length ? 'bg-danger' : 'bg-success');
+      
+      lRow.innerHTML = `<span class="w-1.5 h-1.5 rounded-full ${status} shrink-0"></span>
+        <span class="truncate flex-1 leading-tight">${escapeHtml(l.title || 'Untitled lesson')}</span>`;
+      
+      lRow.onclick = e => {
+        e.stopPropagation();
+        state.selected = { topicIdx: ti, lessonIdx: li, subject: false };
+        renderAll();
+        if (mode === 'mobile') toggleDrawer();
+      };
+      lessonWrap.appendChild(lRow);
+    });
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'w-full text-left px-2 py-2 text-xs text-muted hover:text-primary transition mt-1 rounded-md hover:bg-primarySoft/50';
+    addBtn.innerHTML = '<span class="text-primary font-bold mr-1">+</span> Add lesson';
+    addBtn.onclick = e => { e.stopPropagation(); addLesson(ti); };
+    lessonWrap.appendChild(addBtn);
+    wrapper.appendChild(lessonWrap);
+
+    container.appendChild(wrapper);
+  });
+}
+
+function renderAll() {
+  renderDesktopTree();
+  renderMobileTree();
+  renderCenter();
+  renderDesktopPreview();
+  updateWordCount();
+  updateValidationBar();
+  updateUndoButtons();
+}
+
+function addTopic() {
+  snapshot();
+  state.topics.push({ name: 'New topic', lessons: [] });
+  state.selected = { topicIdx: state.topics.length - 1, lessonIdx: null, subject: false };
+  renderAll();
+  scheduleSave();
+}
+
+function addLesson(topicIdx) {
+  snapshot();
+  state.topics[topicIdx].lessons.push({ title: 'New lesson', body: '# New lesson\n\nStart writing here.\n' });
+  state.selected = { topicIdx, lessonIdx: state.topics[topicIdx].lessons.length - 1, subject: false };
+  renderAll();
+  scheduleSave();
+  const drawer = document.getElementById('mobile-drawer');
+  if (drawer.classList.contains('open')) toggleDrawer();
+  setTimeout(() => document.getElementById('lesson-title')?.focus(), 80);
+}
+
+function selectSubject() {
+  state.selected = { topicIdx: state.selected.topicIdx, lessonIdx: null, subject: true };
+  renderAll();
+}
+
+/* ============================================================
+   CENTER PANE
+   ============================================================ */
+function renderCenter() {
+  const pane = document.getElementById('editor-container');
+  if (!pane) return;
+  pane.innerHTML = '';
+
+  if (state.selected.subject) {
+    pane.appendChild(renderSubjectEditor());
+    return;
+  }
+  const ti = state.selected.topicIdx;
+  if (ti == null || !state.topics[ti]) {
+    pane.innerHTML = '<div class="text-center text-muted py-20 text-sm">Select a topic or lesson, or create a new one.</div>';
+    return;
+  }
+
+  if (state.selected.lessonIdx === null) {
+    pane.appendChild(renderTopicEditor(ti));
+  } else {
+    pane.appendChild(renderLessonEditor(ti, state.selected.lessonIdx));
+  }
+}
+
+function renderSubjectEditor() {
+  const wrap = document.createElement('div');
+  wrap.className = 'w-full max-w-3xl mx-auto p-6 md:p-10 space-y-8';
+  wrap.innerHTML = `
+    <div class="flex items-center gap-3 mb-4">
+      <button onclick="state.selected.subject=false; renderAll();" class="md:hidden p-2 -ml-2 text-muted hover:text-text">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+      </button>
+      <h2 class="text-2xl font-bold text-text">Bank Settings</h2>
+    </div>
+    <div class="bg-surface border border-border rounded-xl p-6 shadow-sm space-y-6">
+      <div>
+        <label class="block text-xs font-bold text-muted uppercase tracking-wider mb-2">Subject name</label>
+        <input id="settings-subject" type="text" value="${escapeHtml(state.subject)}"
+          class="input-base text-lg font-bold">
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-muted uppercase tracking-wider mb-2">Description (optional)</label>
+        <textarea id="settings-description" rows="3"
+          class="input-base">${escapeHtml(state.description)}</textarea>
+      </div>
+    </div>
+    <div class="pt-4 border-t border-border">
+      <p class="text-sm text-muted">${state.topics.length} topics · ${totalLessons()} lessons · ~${totalMinutes()} min reading</p>
+    </div>
+    <div class="pt-4 border-t border-border">
+      <button onclick="deleteBank()" class="btn text-danger border-danger/30 hover:bg-danger/10">Delete entire bank</button>
+    </div>`;
+  setTimeout(() => {
+    document.getElementById('settings-subject').addEventListener('input', e => {
+      snapshot(); state.subject = e.target.value;
+      document.getElementById('subject-input').value = state.subject;
+      scheduleSave();
+    });
+    document.getElementById('settings-description').addEventListener('input', e => {
+      snapshot(); state.description = e.target.value; scheduleSave();
+    });
+  }, 0);
+  return wrap;
+}
+
+function renderTopicEditor(ti) {
+  const topic = state.topics[ti];
+  const wrap = document.createElement('div');
+  wrap.className = 'w-full max-w-3xl mx-auto p-6 md:p-10 space-y-6';
+  wrap.innerHTML = `
+    <div class="flex items-center gap-3 mb-2">
+      <button onclick="toggleDrawer()" class="md:hidden p-2 -ml-2 text-muted hover:text-text">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+      </button>
+      <h2 class="text-2xl font-bold text-text">Edit Topic</h2>
+    </div>
+    <div class="bg-surface border border-border rounded-xl p-6 shadow-sm">
+      <label class="block text-xs font-bold text-muted uppercase tracking-wider mb-2">Topic name</label>
+      <input id="topic-name" type="text" value="${escapeHtml(topic.name)}" class="input-base text-lg font-bold">
+    </div>
+    <div class="bg-surface border border-border rounded-xl p-6 shadow-sm">
+      <p class="text-xs font-bold text-muted uppercase tracking-wider mb-4">${topic.lessons.length} lessons in this topic</p>
+      ${topic.lessons.length ? `<ul class="space-y-3 text-sm text-text">${topic.lessons.map((l, i) => `<li class="flex items-center justify-between gap-2 border-b border-border/50 pb-2 last:border-0 last:pb-0"><span class="truncate font-medium">${i + 1}. ${escapeHtml(l.title)}</span><span class="text-muted shrink-0 text-xs bg-surface2 px-2 py-1 rounded">${estimateMinutes(l.body)} min</span></li>`).join('')}</ul>` : '<p class="text-sm text-muted italic">No lessons yet.</p>'}
+    </div>
+    <div class="flex flex-col sm:flex-row gap-3 pt-4 border-t border-border">
+      <button onclick="deleteTopic(${ti})" class="btn text-danger border-danger/30 hover:bg-danger/10">Delete topic</button>
+      <button onclick="addLesson(${ti})" class="btn btn-primary sm:flex-1">+ Add lesson</button>
+    </div>`;
+  setTimeout(() => {
+    document.getElementById('topic-name').addEventListener('input', e => {
+      snapshot(); topic.name = e.target.value; renderAll(); scheduleSave();
+    });
+  }, 0);
+  return wrap;
+}
+
+function deleteTopic(ti) {
+  if (!confirm('Delete this topic and all its lessons?')) return;
+  snapshot();
+  state.topics.splice(ti, 1);
+  if (!state.topics.length) state.topics.push({ name: 'Introduction', lessons: [] });
+  state.selected = { topicIdx: 0, lessonIdx: null, subject: false };
+  renderAll(); scheduleSave();
+}
+
+function deleteBank() {
+  if (!confirm('Delete the entire bank? This cannot be undone except with Ctrl+Z.')) return;
+  snapshot();
+  state.topics = [{ name: 'Introduction', lessons: [] }];
+  state.selected = { topicIdx: 0, lessonIdx: null, subject: false };
+  state.subject = 'Untitled Subject';
+  document.getElementById('subject-input').value = state.subject;
+  renderAll(); scheduleSave();
+}
+
+function renderLessonEditor(ti, li) {
+  const topic = state.topics[ti];
+  const lesson = topic.lessons[li];
+  const wrap = document.createElement('div');
+  wrap.className = 'h-full flex flex-col bg-surface w-full';
+  wrap.innerHTML = `
+    <div class="px-4 py-3 border-b border-border flex items-center justify-between gap-2 shrink-0 bg-surface">
+      <div class="flex items-center gap-2 min-w-0">
+        <button onclick="toggleDrawer()" class="md:hidden p-1.5 -ml-1 text-muted hover:text-text rounded-md">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+        </button>
+        <div class="text-xs font-semibold text-muted truncate uppercase tracking-wider">${escapeHtml(topic.name)}</div>
+      </div>
+      <div class="flex gap-2 shrink-0">
+        <button onclick="duplicateLesson(${ti}, ${li})" class="btn text-xs py-1 hidden sm:block">Duplicate</button>
+        <button onclick="deleteLesson(${ti}, ${li})" class="btn text-xs py-1 text-danger border-danger/30 hover:bg-danger/10">Delete</button>
+      </div>
+    </div>
+    
+    <div class="px-6 md:px-10 pt-6 pb-2 shrink-0 w-full">
+      <label class="block text-xs font-bold text-muted uppercase tracking-wider mb-2">Lesson title</label>
+      <input id="lesson-title" type="text" value="${escapeHtml(lesson.title)}"
+        class="w-full bg-transparent text-2xl md:text-3xl font-bold text-text border-b-2 border-border pb-2 focus:outline-none focus:border-primary transition placeholder-muted">
+    </div>
+    
+    <div class="px-6 md:px-10 flex items-center gap-1 flex-wrap shrink-0 border-b border-border pb-3 w-full">
+      <button data-format="bold" class="toolbar-btn p-2 rounded hover:bg-surface2 text-text font-bold" title="Bold">B</button>
+      <button data-format="italic" class="toolbar-btn p-2 rounded hover:bg-surface2 text-text italic" title="Italic">I</button>
+      <span class="w-px h-5 bg-border mx-1"></span>
+      <button data-format="h1" class="toolbar-btn p-2 rounded hover:bg-surface2 text-text font-bold text-xs">H1</button>
+      <button data-format="h2" class="toolbar-btn p-2 rounded hover:bg-surface2 text-text font-bold text-xs">H2</button>
+      <span class="w-px h-5 bg-border mx-1"></span>
+      <button data-format="link" class="toolbar-btn p-2 rounded hover:bg-surface2 text-text" title="Link">🔗</button>
+      <button data-format="list" class="toolbar-btn p-2 rounded hover:bg-surface2 text-text" title="List">•</button>
+      <button data-format="code" class="toolbar-btn p-2 rounded hover:bg-surface2 text-text" title="Code">&lt;/&gt;</button>
+      <span class="w-px h-5 bg-border mx-1"></span>
+      <button data-format="math" class="toolbar-btn p-2 rounded hover:bg-surface2 text-text" title="Math">Σ</button>
+      <button data-format="quiz" class="toolbar-btn p-2 rounded hover:bg-surface2 text-text" title="Quiz">?</button>
+      <button data-format="callout" class="toolbar-btn p-2 rounded hover:bg-surface2 text-text" title="Callout">💡</button>
+    </div>
+    
+    <div class="flex-1 flex min-h-0 relative w-full">
+      <textarea id="lesson-body" spellcheck="false"
+        class="editor-textarea"
+        style="tab-size:2">${escapeHtml(lesson.body)}</textarea>
+    </div>`;
+  setTimeout(() => bindLessonEditor(ti, li), 0);
+  return wrap;
+}
+
+function duplicateLesson(ti, li) {
+  snapshot();
+  const lesson = state.topics[ti].lessons[li];
+  const copy = JSON.parse(JSON.stringify(lesson));
+  copy.title += ' (Copy)';
+  state.topics[ti].lessons.splice(li + 1, 0, copy);
+  state.selected = { topicIdx: ti, lessonIdx: li + 1, subject: false };
+  renderAll(); scheduleSave();
+}
+
+function deleteLesson(ti, li) {
+  if (!confirm('Delete this lesson?')) return;
+  snapshot();
+  state.topics[ti].lessons.splice(li, 1);
+  state.selected = { topicIdx: ti, lessonIdx: null, subject: false };
+  renderAll(); scheduleSave();
+}
+
+function bindLessonEditor(ti, li) {
+  const lesson = state.topics[ti].lessons[li];
+  const titleInput = document.getElementById('lesson-title');
+  const bodyInput = document.getElementById('lesson-body');
+
+  titleInput?.addEventListener('input', e => {
+    snapshot();
+    lesson.title = e.target.value;
+    renderDesktopTree();
+    renderMobileTree();
+    scheduleSave();
+  });
+
+  bodyInput?.addEventListener('input', e => {
+    snapshot();
+    lesson.body = e.target.value;
+    scheduleSave();
+    updateWordCount();
+    updateValidationBar();
+    clearTimeout(previewTimer);
+    previewTimer = setTimeout(() => {
+      renderDesktopPreview();
+    }, 400);
+  });
+
+  bodyInput?.addEventListener('keydown', e => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const start = bodyInput.selectionStart, end = bodyInput.selectionEnd;
+      bodyInput.setRangeText('  ', start, end, 'end');
+      bodyInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  });
+
+  document.querySelectorAll('.toolbar-btn').forEach(btn => {
+    btn.onclick = () => insertFormat(btn.dataset.format);
+  });
+}
+
+/* ============================================================
+   TOOLBAR INSERT
+   ============================================================ */
+const SCAFFOLDS = {
+  bold: () => '**bold text**',
+  italic: () => '*italic text*',
+  h1: () => '\n# Heading\n',
+  h2: () => '\n## Heading\n',
+  link: () => '[link text](https://example.com)',
+  list: () => '\n- item\n',
+  tasks: () => '\n- [ ] task\n',
+  code: () => '\n```javascript\n// code\n```\n',
+  math: () => '\n```math\nx = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}\n```\n',
+  quiz: () => '\n```quiz\nquestion: What is the key idea?\noptions:\n  - First option\n  - Second option\n  - Third option\nanswer: 2\nexplanation: Explain why option 2 is correct.\n```\n',
+  callout: () => '\n```callout\ntype: tip\ntitle: A worked example\nWalk through the idea step by step.\n```\n',
+  steps: () => '\n```steps\n1. **Start here.** First step.\n2. **Connect.** Second step.\n3. **Finish.** Bring it together.\n```\n',
+  video: () => '\n```video\nurl: https://www.youtube.com/watch?v=VIDEO_ID\ntitle: Descriptive title\ncaption: What to notice\n```\n'
+};
+
+function insertFormat(type) {
+  const editor = document.getElementById('lesson-body');
+  if (!editor) return;
+  const scaffold = SCAFFOLDS[type];
+  if (!scaffold) return;
+  const start = editor.selectionStart, end = editor.selectionEnd;
+  editor.focus();
+  editor.setRangeText(scaffold(), start, end, 'end');
+  editor.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+/* ============================================================
+   MARKDOWN RENDERER
+   ============================================================ */
+function renderMarkdown(source) {
+  if (!source) return '<p class="text-muted italic">No content yet.</p>';
+  const blocks = [];
+  let prepared = String(source).replace(/^```(quiz|callout|math|steps|video)[ \t]*\n([\s\S]*?)^```[ \t]*(?:\n|$)/gmi,
+    (_, type, raw) => {
+      blocks.push(renderBlock(type.toLowerCase(), raw));
+      return `\n\n<div data-block="${blocks.length - 1}"></div>\n\n`;
+    });
+
+  let html = '';
+  if (window.marked) {
+    html = marked.parse(prepared, { gfm: true });
+  } else {
+    html = prepared.split(/\n\n+/).map(p => `<p>${escapeHtml(p)}</p>`).join('');
+  }
+  if (window.DOMPurify) {
+    html = DOMPurify.sanitize(html, {
+      ALLOWED_TAGS: ['a','blockquote','br','code','del','div','em','h1','h2','h3','h4','hr','img','input','li','ol','p','pre','span','strong','table','thead','tbody','td','th','tr','ul','sub','sup'],
+      ALLOWED_ATTR: ['href','src','alt','title','class','type','checked','disabled','data-block'],
+      ALLOW_DATA_ATTR: true
+    });
+  }
+  const container = document.createElement('div');
+  container.innerHTML = html;
+  container.querySelectorAll('[data-block]').forEach(node => {
+    const idx = Number(node.dataset.block);
+    const div = document.createElement('div');
+    div.innerHTML = blocks[idx] || '';
+    node.replaceWith(div.firstElementChild || div);
+  });
+  container.querySelectorAll('p, li, td, th, span, strong, em').forEach(el => {
+    el.innerHTML = wrapMath(el.innerHTML);
+  });
+  return container.innerHTML;
+}
+
+function wrapMath(html) {
+  return html.replace(/\$\$([^$]+?)\$\$/g, (_, m) => `<span class="math-display" data-latex="${escapeAttr(m)}" data-display="true"></span>`)
+             .replace(/\$([^\n$]+?)\$/g, (_, m) => `<span class="math-inline" data-latex="${escapeAttr(m)}" data-display="false"></span>`);
+}
+
+function renderBlock(type, raw) {
+  if (type === 'quiz') return renderQuizBlock(raw);
+  if (type === 'math') return `<div class="math-display text-center py-4 overflow-x-auto" data-latex="${escapeAttr(raw.trim())}" data-display="true"></div>`;
+  if (type === 'callout') {
+    const lines = raw.trim().split('\n');
+    let variant = 'note', title = '';
+    const content = lines.filter(l => {
+      if (/^type:/i.test(l)) { variant = l.replace(/^type:\s*/i, '').trim(); return false; }
+      if (/^title:/i.test(l)) { title = l.replace(/^title:\s*/i, '').trim(); return false; }
+      return true;
+    }).join('\n');
+    if (!['note','tip','warning','exam-focus'].includes(variant)) variant = 'note';
+    return `<div class="callout ${variant}"><div><div class="callout-title">${escapeHtml(title || 'Note')}</div><div>${renderSimple(content)}</div></div></div>`;
+  }
+  if (type === 'steps') {
+    const steps = raw.trim().split(/\n(?=\d+[.)]\s|[-*]\s)/).map(l => l.replace(/^(?:\d+[.)]|[-*])\s*/, '').trim()).filter(Boolean);
+    return `<ol class="worked-steps">${steps.map((s, i) => `<li><span class="step-num">${i + 1}</span><div>${renderSimple(s)}</div></li>`).join('')}</ol>`;
+  }
+  if (type === 'video') {
+    const f = {};
+    raw.trim().split('\n').forEach(l => { const m = l.match(/^(url|src|title|caption):\s*(.*)$/i); if (m) f[m[1].toLowerCase()] = m[2]; });
+    const src = f.url || f.src || raw.trim().split('\n')[0];
+    try {
+      const u = new URL(src);
+      let embed = '';
+      if (/youtube\.com$|youtu\.be$/.test(u.hostname)) {
+        const id = u.searchParams.get('v') || u.pathname.split('/').filter(Boolean).pop();
+        if (id) embed = `https://www.youtube-nocookie.com/embed/${id}`;
+      } else if (/vimeo\.com$/.test(u.hostname)) {
+        const id = u.pathname.split('/').filter(Boolean).pop();
+        if (id) embed = `https://player.vimeo.com/video/${id}`;
+      }
+      if (embed) return `<figure><iframe src="${escapeAttr(embed)}" class="w-full aspect-video rounded-xl border border-border" loading="lazy" allowfullscreen></iframe><figcaption class="text-xs text-muted mt-2 text-center">${escapeHtml(f.caption || f.title || '')}</figcaption></figure>`;
+    } catch {}
+    return `<div class="text-danger text-xs p-4 border border-danger/40 rounded-xl bg-danger/5">Invalid video URL: ${escapeHtml(src)}</div>`;
+  }
+  return '';
+}
+
+function renderQuizBlock(raw) {
+  let data;
+  try { data = JSON.parse(raw); } catch {
+    data = { options: [] };
+    let current = '';
+    raw.split('\n').forEach(l => {
+      const f = l.match(/^([a-zA-Z]+):\s*(.*)$/);
+      if (f) {
+        current = f[1].toLowerCase();
+        if (current !== 'options') data[current] = f[2].replace(/^['"]|['"]$/g, '');
+      } else if (current === 'options' && /^\s*-\s+/.test(l)) data.options.push(l.replace(/^\s*-\s+/, '').replace(/^['"]|['"]$/g, ''));
+      else if (l.trim() && current && current !== 'options') data[current] += ' ' + l.trim();
+    });
+  }
+  const answerRaw = data.answer ?? data.correct;
+  const answerIdx = Number.isInteger(data.correctIndex) ? data.correctIndex : (Number(answerRaw) - 1);
+  const question = data.question || '';
+  return `<div class="quiz-block">
+    <div class="text-[10px] font-bold text-primary uppercase tracking-wider mb-2">Practice quiz</div>
+    <div class="text-base font-semibold mb-4">${escapeHtml(question)}</div>
+    ${data.options.map((opt, i) => `<div class="quiz-option ${i === answerIdx ? 'correct' : ''}"><span class="w-5 h-5 rounded-full border border-border flex items-center justify-center text-[10px] font-bold">${String.fromCharCode(65 + i)}</span><span>${renderSimple(opt)}</span></div>`).join('')}
+    ${data.explanation ? `<div class="mt-4 pt-4 border-t border-border text-sm text-muted">${renderSimple(data.explanation)}</div>` : ''}
+  </div>`;
+}
+
+function renderSimple(md) {
+  if (!md) return '';
+  let html = escapeHtml(md);
+  html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*([^*\n]+)\*/g, '<em>$1</em>').replace(/`([^`]+)`/g, '<code>$1</code>');
+  html = html.replace(/\$([^\n$]+?)\$/g, (_, m) => `<span class="math-inline" data-latex="${escapeAttr(m)}" data-display="false"></span>`);
+  return html;
+}
+
+function hydrateMath(root) {
+  if (!window.katex) return;
+  root.querySelectorAll('[data-latex]').forEach(node => {
+    if (node.dataset.rendered === 'true') return;
+    try {
+      katex.render(node.dataset.latex, node, { displayMode: node.dataset.display === 'true', throwOnError: false, strict: 'ignore' });
+      node.dataset.rendered = 'true';
+    } catch {}
+  });
+}
+
+/* ============================================================
+   PREVIEW
+   ============================================================ */
+function renderDesktopPreview() {
+  const el = document.getElementById('desktop-preview-content');
+  if (!el) return;
+  const li = state.selected.lessonIdx;
+  if (li == null || !state.topics[state.selected.topicIdx]?.lessons[li]) {
+    el.innerHTML = '<p class="text-muted italic text-sm text-center py-10">Select a lesson to preview.</p>';
+    return;
+  }
+  const lesson = state.topics[state.selected.topicIdx].lessons[li];
+  el.innerHTML = `<h1>${escapeHtml(lesson.title)}</h1>` + renderMarkdown(lesson.body);
+  hydrateMath(el);
+}
+
+/* ============================================================
+   WORD COUNT / VALIDATION
+   ============================================================ */
+function updateWordCount() {
+  const el = document.getElementById('word-count');
+  if (!el) return;
+  const li = state.selected.lessonIdx;
+  if (li == null) {
+    el.textContent = totalLessons() + ' lessons · ' + totalMinutes() + ' min total';
+    return;
+  }
+  const lesson = state.topics[state.selected.topicIdx]?.lessons[li];
+  if (!lesson) return;
+  const words = countWords(lesson.body || '');
+  const blocks = ((lesson.body || '').match(/^```\w+/gm) || []).length;
+  el.textContent = `${words} words · ${blocks} blocks`;
+}
+
+function countWords(text) {
+  return (text || '').replace(/```[\s\S]*?```/g, ' ').replace(/[#*_`$|>]/g, ' ').trim().split(/\s+/).filter(Boolean).length;
+}
+
+function estimateMinutes(text) {
+  return Math.max(1, Math.ceil(countWords(text) / 180));
+}
+
+function totalLessons() { return state.topics.reduce((s, t) => s + t.lessons.length, 0); }
+function totalMinutes() { return state.topics.reduce((s, t) => s + t.lessons.reduce((a, l) => a + estimateMinutes(l.body), 0), 0); }
+
+function validateLessonText(body) {
+  const issues = [];
+  if (!body || !body.trim()) { issues.push('Lesson is empty'); return issues; }
+  const fences = (body.match(/^```/gm) || []).length;
+  if (fences % 2 !== 0) issues.push('Unbalanced code fences');
+  const mathBlocks = body.match(/^```math\b[\s\S]*?^```/gm) || [];
+  for (const block of mathBlocks) {
+    if (window.katex) {
+      try { katex.renderToString(block.replace(/^```math\b/, '').replace(/```$/, ''), { throwOnError: true }); }
+      catch { issues.push('Invalid LaTeX in math block'); break; }
+    }
+  }
+  return issues;
+}
+
+function updateValidationBar() {
+  const iconEl = document.getElementById('validation-icon');
+  const textEl = document.getElementById('validation-text');
+  const btn = document.getElementById('validation-btn');
+  if (!iconEl || !textEl || !btn) return;
+  
+  const li = state.selected.lessonIdx;
+  if (li == null) {
+    iconEl.textContent = '✓';
+    iconEl.className = 'text-success text-sm';
+    textEl.textContent = 'All checks passed';
+    btn.className = 'flex items-center gap-1.5 hover:text-text text-muted transition';
+    return;
+  }
+  const lesson = state.topics[state.selected.topicIdx]?.lessons[li];
+  const issues = validateLessonText(lesson?.body);
+  if (!issues.length) {
+    iconEl.textContent = '✓';
+    iconEl.className = 'text-success text-sm';
+    textEl.textContent = 'All checks passed';
+    btn.className = 'flex items-center gap-1.5 hover:text-text text-muted transition';
+  } else {
+    iconEl.textContent = '⚠';
+    iconEl.className = 'text-warning text-sm';
+    textEl.textContent = issues.length + ' issue' + (issues.length > 1 ? 's' : '');
+    btn.className = 'flex items-center gap-1.5 hover:text-text text-warning font-medium transition';
+  }
+}
+
+/* ============================================================
+   UTILITIES
+   ============================================================ */
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+function escapeAttr(s) { return escapeHtml(s).replace(/\n/g, ' '); }
+function slugify(s) { return String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'subject'; }
+
+function showToast(message, type = 'info') {
+  const host = document.getElementById('toast-host');
+  const colors = { 
+    info: 'bg-surface border-border text-text shadow-lg', 
+    success: 'bg-success/10 border-success text-success', 
+    warning: 'bg-warning/10 border-warning text-warning', 
+    error: 'bg-danger/10 border-danger text-danger' 
+  };
+  const el = document.createElement('div');
+  el.className = `px-4 py-2.5 rounded-xl border text-sm font-medium shadow-lg pointer-events-auto ${colors[type] || colors.info}`;
+  el.textContent = message;
+  host.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+function openModal(id) {
+  const m = document.getElementById(id);
+  if (!m) return;
+  m.classList.remove('hidden');
+  m.classList.add('flex');
+}
+function closeModal(id) {
+  const m = document.getElementById(id);
+  if (!m) return;
+  m.classList.add('hidden');
+  m.classList.remove('flex');
+}
+
+/* ============================================================
+   EXPORT
    ============================================================ */
 function buildBankText() {
-  let text = 'Subject: ' + (currentStudio()?.course.title || 'Untitled Subject') + '\n';
-  const chapters = currentStudio()?.course.chapters || [];
-  for (const chapter of chapters) {
-    for (const lesson of chapter.lessons) {
-      text += '\nTopic: ' + chapter.title + '\n\n';
+  let text = 'Subject: ' + (state.subject || 'Untitled Subject') + '\n';
+  if (state.description) text += 'Description: ' + state.description + '\n';
+  text += '\n';
+  for (const topic of state.topics) {
+    if (!topic.lessons.length) continue;
+    text += 'Topic: ' + topic.name + '\n\n';
+    for (const lesson of topic.lessons) {
       text += 'Lesson: ' + (lesson.title || 'Untitled lesson') + '\n\n';
       text += (lesson.body || '').trim() + '\n\n';
     }
@@ -455,14 +876,314 @@ function buildJSExport() {
   return `window.CBT_NOTE_BANKS = window.CBT_NOTE_BANKS || [];\n\nwindow.CBT_NOTE_BANKS.push(\`${escaped}\`);\n`;
 }
 
+function updateExportPreview() {
+  const format = document.querySelector('input[name="export-format"]:checked')?.value || 'js';
+  const el = document.getElementById('export-preview');
+  if (format === 'zip') {
+    el.textContent = `ZIP bundle will contain ${totalLessons()} .md file(s):\n\n` +
+      state.topics.flatMap(t => t.lessons.map(l => `  ${slugify(t.name)}/${slugify(l.title)}.md`)).join('\n');
+    document.getElementById('export-stats').textContent = totalLessons() + ' files';
+  } else {
+    const code = buildJSExport();
+    el.textContent = code;
+    document.getElementById('export-stats').textContent = (new Blob([code]).size / 1024).toFixed(1) + ' KB';
+  }
+}
+
+function openExportModal() {
+  openModal('modal-export');
+  document.getElementById('export-filename').value = slugify(state.subject) + '-notes.js';
+  updateExportPreview();
+}
+
+function copyExport() {
+  const code = document.getElementById('export-preview').textContent;
+  copyText(code).then(ok => {
+    showToast(ok ? 'Copied.' : 'Copy failed.', ok ? 'success' : 'error');
+  });
+}
+
+async function downloadExport() {
+  const format = document.querySelector('input[name="export-format"]:checked')?.value || 'js';
+  if (format === 'zip') return downloadZip();
+  const code = buildJSExport();
+  const name = document.getElementById('export-filename').value || 'notes-bank.js';
+  downloadBlob(new Blob([code], { type: 'application/javascript;charset=utf-8' }), name);
+  showToast('Downloaded ' + name, 'success');
+  closeModal('modal-export');
+}
+
+async function downloadZip() {
+  if (typeof JSZip === 'undefined') {
+    showToast('Zip library not loaded. Try .js export instead.', 'error');
+    return;
+  }
+  try {
+    const zip = new JSZip();
+    state.topics.forEach(topic => {
+      topic.lessons.forEach(lesson => {
+        const fm = `---\ntitle: ${lesson.title}\nsubject: ${state.subject}\ntopic: ${topic.name}\nduration: ${estimateMinutes(lesson.body)}\n---\n\n`;
+        zip.file(`${slugify(topic.name)}/${slugify(lesson.title)}.md`, fm + (lesson.body || ''));
+      });
+    });
+    const blob = await zip.generateAsync({ type: 'blob' });
+    downloadBlob(blob, slugify(state.subject) + '-notes.zip');
+    showToast('Downloaded .zip', 'success');
+    closeModal('modal-export');
+  } catch (e) {
+    showToast('Zip failed: ' + e.message, 'error');
+  }
+}
+
+function downloadBlob(blob, name) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function copyText(text) {
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {}
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed'; ta.style.top = '-1000px';
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand('copy');
+    ta.remove();
+    return ok;
+  } catch { return false; }
+}
+
+/* ============================================================
+   IMPORT
+   ============================================================ */
+let importTab = 'file';
+
+function bindImportTabs() {
+  document.querySelectorAll('.import-tab').forEach(tab => {
+    tab.onclick = () => {
+      importTab = tab.dataset.tab;
+      document.querySelectorAll('.import-tab').forEach(t => {
+        t.classList.toggle('active', t === tab);
+        t.classList.toggle('text-primary', t === tab);
+        t.classList.toggle('border-b-2', t === tab);
+        t.classList.toggle('border-primary', t === tab);
+        t.classList.toggle('text-muted', t !== tab);
+      });
+      document.querySelectorAll('.import-panel').forEach(p => p.classList.toggle('hidden', p.dataset.panel !== importTab));
+    };
+  });
+  const initial = document.querySelector('.import-tab');
+  if (initial) initial.click();
+}
+
+function openImportModal() {
+  openModal('modal-import');
+  const stored = localStorage.getItem(LS_CREDS);
+  if (stored) {
+    try {
+      const c = JSON.parse(stored);
+      document.getElementById('import-gh-owner').value = c.owner || '';
+      document.getElementById('import-gh-repo').value = c.repo || '';
+    } catch {}
+  }
+  document.getElementById('import-summary').classList.add('hidden');
+  document.getElementById('import-confirm').disabled = true;
+  pendingImport = null;
+}
+
+function handleImportFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => processImportText(reader.result);
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function parsePasted() {
+  const text = document.getElementById('import-paste').value;
+  if (text.trim()) processImportText(text);
+}
+
+async function fetchFromGitHub() {
+  const owner = document.getElementById('import-gh-owner').value.trim();
+  const repo = document.getElementById('import-gh-repo').value.trim();
+  const file = document.getElementById('import-gh-filename').value.trim();
+  if (!owner || !repo || !file) return showToast('Fill owner, repo, filename.', 'warning');
+  localStorage.setItem(LS_CREDS, JSON.stringify({ owner, repo }));
+  
+  const url = `https://api.github.com/repos/${owner}/${repo}/contents/notes-banks/${file}`;
+  try {
+    showToast('Fetching…');
+    const res = await fetch(url, { headers: { 'Accept': 'application/vnd.github.v3.raw' } });
+    if (!res.ok) {
+       if (res.status === 404) throw new Error('File not found. Check the repo name and folder.');
+       throw new Error('HTTP ' + res.status);
+    }
+    const text = await res.text();
+    processImportText(text);
+  } catch (e) {
+    showToast('Fetch failed: ' + e.message, 'error');
+  }
+}
+
+function processImportText(text) {
+  const parsed = parseBankText(text);
+  if (!parsed) {
+    document.getElementById('import-summary').classList.remove('hidden');
+    document.getElementById('import-summary-head').textContent = 'Could not parse bank';
+    document.getElementById('import-warnings').innerHTML = '<div>Check that the file has "Subject:" and "Topic:" lines.</div>';
+    document.getElementById('import-confirm').disabled = true;
+    return;
+  }
+  pendingImport = parsed;
+  const totalL = parsed.topics.reduce((s, t) => s + t.lessons.length, 0);
+  document.getElementById('import-summary').classList.remove('hidden');
+  document.getElementById('import-summary-head').textContent = `Parsed: "${parsed.subject}" · ${parsed.topics.length} topics · ${totalL} lessons`;
+  document.getElementById('import-warnings').innerHTML = '';
+  document.getElementById('import-confirm').disabled = false;
+}
+
+function parseBankText(raw) {
+  if (!raw) return null;
+  let text = String(raw);
+
+  const m = text.match(/window\.CBT_NOTE_BANKS\.push\(\s*`([\s\S]*?)`\s*\)/);
+  if (m) {
+    text = m[1].replace(/\\`/g, '`').replace(/\\\$/g, '$').replace(/\\\\/g, '\\');
+  } else {
+    const m2 = text.match(/`([\s\S]*?)`/);
+    if (m2) text = m2[1];
+  }
+
+  const lines = text.split('\n');
+  let subject = null, description = '';
+  const topics = [];
+  let currentTopic = null, currentLesson = null, lessonLines = [];
+
+  function flushLesson() {
+    if (!currentLesson) return;
+    const body = lessonLines.join('\n').trim();
+    if (currentTopic) currentTopic.lessons.push({ title: currentLesson, body });
+    currentLesson = null; lessonLines = [];
+  }
+  function flushTopic() {
+    flushLesson();
+    if (currentTopic && currentTopic.lessons.length) topics.push(currentTopic);
+    currentTopic = null;
+  }
+
+  lines.forEach(raw => {
+    const l = raw;
+    const subM = l.match(/^Subject:\s*(.*)$/i);
+    if (subM) { flushTopic(); subject = subM[1].trim(); return; }
+    const descM = l.match(/^Description:\s*(.*)$/i);
+    if (descM) { description = descM[1].trim(); return; }
+    const topM = l.match(/^Topic:\s*(.*)$/i);
+    if (topM) { flushTopic(); currentTopic = { name: topM[1].trim(), lessons: [] }; return; }
+    const lessM = l.match(/^Lesson:\s*(.*)$/i);
+    if (lessM) { flushLesson(); currentLesson = lessM[1].trim(); lessonLines = []; return; }
+    if (currentLesson) lessonLines.push(l);
+  });
+  flushTopic();
+
+  if (!subject || !topics.length) return null;
+  return { subject, description, topics };
+}
+
+function executeImport() {
+  if (!pendingImport) return;
+  const mode = document.querySelector('input[name="import-mode"]:checked')?.value || 'merge';
+  if (mode === 'replace') {
+    if (!confirm('Replace the entire current bank? This will overwrite your current content.')) return;
+  }
+  snapshot();
+
+  if (mode === 'replace') {
+    state.subject = pendingImport.subject;
+    state.description = pendingImport.description;
+    state.topics = pendingImport.topics;
+    state.selected = { topicIdx: 0, lessonIdx: null, subject: false };
+  } else if (mode === 'merge') {
+    for (const t of pendingImport.topics) {
+      let existing = state.topics.find(et => et.name.toLowerCase() === t.name.toLowerCase());
+      if (!existing) {
+        state.topics.push(t);
+        continue;
+      }
+      for (const l of t.lessons) {
+        if (!existing.lessons.some(el => el.title.toLowerCase() === l.title.toLowerCase())) {
+          existing.lessons.push(l);
+        }
+      }
+    }
+  } else {
+    state.topics.push(...pendingImport.topics);
+  }
+
+  if (document.getElementById('subject-input')) document.getElementById('subject-input').value = state.subject;
+  pendingImport = null;
+  renderAll();
+  scheduleSave();
+  closeModal('modal-import');
+  showToast('Imported.', 'success');
+}
+
+/* ============================================================
+   PUBLISH
+   ============================================================ */
+function openPublishModal() {
+  openModal('modal-publish');
+  const creds = localStorage.getItem(LS_CREDS);
+  if (creds) {
+    try {
+      const c = JSON.parse(creds);
+      document.getElementById('gh-owner').value = c.owner || '';
+      document.getElementById('gh-repo').value = c.repo || '';
+    } catch {}
+  }
+  document.getElementById('publish-filename').value = slugify(state.subject) + '-notes.js';
+  updatePreflight();
+  document.getElementById('publish-script-tag').classList.add('hidden');
+}
+
+function updatePreflight() {
+  const issues = [];
+  if (!state.subject.trim()) issues.push('Missing subject name');
+  if (!state.topics.length) issues.push('No topics');
+  const totalL = totalLessons();
+  if (!totalL) issues.push('No lessons');
+  
+  state.topics.forEach(t => t.lessons.forEach(l => {
+    const v = validateLessonText(l.body);
+    if (v.length && issues.length < 3) issues.push(`${l.title}: ${v[0]}`);
+  }));
+  
+  const el = document.getElementById('publish-preflight');
+  el.innerHTML = issues.length
+    ? `<div class="text-danger font-semibold mb-1">${issues.length} issue${issues.length > 1 ? 's' : ''} found:</div>` + issues.map(i => `<div class="text-danger">⚠ ${escapeHtml(i)}</div>`).join('')
+    : `<div class="text-success font-semibold flex items-center gap-2"><span class="text-lg">✓</span> ${state.topics.length} topics · ${totalL} lessons. Ready to publish.</div>`;
+}
+
 async function executePublish() {
-  const owner = $('#gh-owner').value.trim();
-  const repo = $('#gh-repo').value.trim();
-  const filename = $('#publish-filename').value.trim();
+  const owner = document.getElementById('gh-owner').value.trim();
+  const repo = document.getElementById('gh-repo').value.trim();
+  const filename = document.getElementById('publish-filename').value.trim();
   if (!owner || !repo || !filename) return showToast('Fill owner, repo, filename.', 'warning');
 
   localStorage.setItem(LS_CREDS, JSON.stringify({ owner, repo }));
-  const btn = $('#publish-btn');
+
+  const btn = document.getElementById('publish-btn');
+  const originalText = btn.textContent;
   btn.disabled = true; btn.textContent = 'Publishing…';
 
   try {
@@ -475,99 +1196,17 @@ async function executePublish() {
     if (!res.ok) throw new Error(result.error || 'Publish failed');
 
     showToast('Published to GitHub.', 'success');
-    $('#script-tag-text').textContent = `<script defer src="notes-banks/${filename}"></script>`;
-    $('#publish-script-tag').classList.remove('hidden');
-    btn.textContent = 'Published!';
+    const tag = `<script defer src="notes-banks/${filename}"></script>`;
+    document.getElementById('script-tag-text').textContent = tag;
+    document.getElementById('publish-script-tag').classList.remove('hidden');
   } catch (e) {
     showToast('Publish failed: ' + e.message, 'error');
-    btn.disabled = false; btn.textContent = 'Publish';
+  } finally {
+    btn.disabled = false; btn.textContent = originalText;
   }
 }
 
-/* ============================================================
-   EVENT BINDINGS
-   ============================================================ */
-function showToast(message, type = 'info') {
-  const host = $('#toast-host');
-  const el = document.createElement('div');
-  el.className = `toast`; el.textContent = message;
-  host.appendChild(el);
-  setTimeout(() => el.remove(), 3000);
-}
-
-function openModal(id) { const m = $('#'+id); if(m){ m.classList.remove('hidden'); m.classList.add('flex'); } }
-function closeModal(id) { const m = $('#'+id); if(m){ m.classList.add('hidden'); m.classList.remove('flex'); } }
-
-function bindEvents() {
-  document.addEventListener('click', e => {
-    const btn = e.target.closest('[data-action]');
-    const fmt = e.target.closest('[data-format]');
-    
-    if (fmt) {
-      e.preventDefault();
-      const editor = $('#markdown-editor');
-      const type = fmt.dataset.format;
-      const scaffolds = {
-        bold: '**bold**', italic: '*italic*', h1: '\n# Heading\n', h2: '\n## Heading\n',
-        link: '[link](https://)', list: '\n- item\n', code: '\n```javascript\n// code\n```\n',
-        math: '\n```math\nx = 1\n```\n', quiz: '\n```quiz\nquestion: ...\noptions:\n  - A\n  - B\nanswer: 1\nexplanation: ...\n```\n',
-        callout: '\n```callout\ntype: tip\ntitle: Note\nContent\n```\n'
-      };
-      if (scaffolds[type] && editor) {
-        editor.setRangeText(scaffolds[type], editor.selectionStart, editor.selectionEnd, 'end');
-        editor.dispatchEvent(new Event('input'));
-      }
-      return;
-    }
-
-    if (!btn) return;
-    const action = btn.dataset.action;
-
-    if (action === 'theme') { state.ui.theme = isDark() ? 'light' : 'dark'; applyTheme(); renderApp(); scheduleSave(); }
-    if (action === 'toggle-preview') { document.body.classList.toggle('preview-open'); }
-    if (action === 'new-subject') { /* Simplified: creates a new lesson in General */ }
-    if (action === 'new-lesson') {
-      const found = findChapter(btn.dataset.chapter);
-      if(found) {
-        const meta = { title:'New Lesson', subject:found.course.id, grade:8, difficulty:'Easy', duration:5 };
-        const lesson = { id:uid('lesson'), title:meta.title, order:found.chapter.lessons.length, status:'draft', frontmatter:meta, body:serializeLesson(meta,'## New Lesson\n\nStart writing...'), publishedBody:null, version:0, createdAt:new Date().toISOString(), updatedAt:new Date().toISOString() };
-        found.chapter.lessons.push(lesson);
-        runtime.activeLesson = lesson.id;
-        persist(); renderApp();
-      }
-    }
-    if (action === 'route') {
-      const match = btn.dataset.route.match(/#\/studio\/(.*)/);
-      if(match) { runtime.activeLesson = match[1]; renderApp(); }
-    }
-    if (action === 'tree-course') { runtime.treeOpen[btn.dataset.course] = !runtime.treeOpen[btn.dataset.course]; renderCourseTree(); }
-    if (action === 'tree-chapter') { runtime.treeOpen[btn.dataset.chapter] = !runtime.treeOpen[btn.dataset.chapter]; renderCourseTree(); }
-    
-    if (action === 'publish') { 
-      const c = JSON.parse(localStorage.getItem(LS_CREDS)||'{}');
-      $('#gh-owner').value = c.owner||''; $('#gh-repo').value = c.repo||'';
-      $('#publish-filename').value = slugify(currentStudio()?.course.title||'notes')+'-notes.js';
-      $('#publish-script-tag').classList.add('hidden');
-      openModal('modal-publish'); 
-    }
-    if (action === 'export') {
-      $('#export-preview').textContent = buildJSExport();
-      openModal('modal-export');
-    }
-    
-    if (action === 'close-dialog') btn.closest('dialog')?.close();
-  });
-
-  document.addEventListener('DOMContentLoaded', () => {
-    // Bind Modal buttons
-    $('#publish-btn').onclick = executePublish;
-    $('#export-download').onclick = () => {
-      const blob = new Blob([buildJSExport()], {type:'text/javascript'});
-      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'notes.js'; a.click();
-    };
-    $('#export-copy').onclick = () => {
-      navigator.clipboard.writeText(buildJSExport());
-      showToast('Copied!', 'success');
-    };
-  });
+function copyScriptTag() {
+  const text = document.getElementById('script-tag-text').textContent;
+  copyText(text).then(ok => showToast(ok ? 'Copied. Paste into notes.html before the script tags.' : 'Copy failed.', ok ? 'success' : 'error'));
 }
