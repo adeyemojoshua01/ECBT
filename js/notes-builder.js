@@ -1,5 +1,6 @@
 'use strict';
 
+// Independent State Management
 const LS_STATE = 'cbt_notes_builder_v3';
 const LS_UNDO  = 'cbt_notes_builder_undo_v3';
 const LS_CREDS = 'cbt_notes_builder_creds';
@@ -19,9 +20,6 @@ let saveTimer = null;
 let previewTimer = null;
 let pendingImport = null;
 
-/* ============================================================
-   INIT
-   ============================================================ */
 document.addEventListener('DOMContentLoaded', init);
 
 function init() {
@@ -38,7 +36,6 @@ function init() {
   bindShortcuts();
   bindImportTabs();
   
-  // Render both trees
   renderAll();
 }
 
@@ -198,7 +195,7 @@ function toggleMobilePreview() {
   const overlay = document.getElementById('mobile-preview');
   overlay.classList.toggle('open');
   if (overlay.classList.contains('open')) {
-    renderDesktopPreview(); // Ensure content is up to date
+    renderDesktopPreview();
     const content = document.getElementById('mobile-preview-content');
     content.innerHTML = document.getElementById('desktop-preview-content').innerHTML;
     hydrateMath(content);
@@ -262,7 +259,6 @@ function renderTreeInto(container, mode) {
     const wrapper = document.createElement('div');
     wrapper.className = 'mb-2';
 
-    // Topic Row
     const row = document.createElement('div');
     const isTopicSel = state.selected.topicIdx === ti && state.selected.lessonIdx === null;
     row.className = 'flex items-center justify-between px-3 py-2 rounded-lg text-sm cursor-pointer transition ' +
@@ -277,7 +273,6 @@ function renderTreeInto(container, mode) {
     };
     wrapper.appendChild(row);
 
-    // Lessons
     const lessonWrap = document.createElement('div');
     lessonWrap.className = 'ml-4 pl-3 border-l border-border space-y-1 mt-1';
 
